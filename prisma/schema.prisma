@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+// ---------- Floorset: what Shopify doesn't model ----------
+// Catalog, variants and per-location quantities stay in Shopify.
+// IDs like productId/variantId are Shopify GIDs.
+// shortcut: single-store (no shop column), add shop scoping for multi-store tenants.
+
+model Zone {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  palette  Json // color families allowed in this zone, e.g. ["neutral","pastel"]
+  fixtures Fixture[]
+}
+
+model Fixture {
+  id         String      @id @default(cuid())
+  name       String      @unique
+  zoneId     String
+  zone       Zone        @relation(fields: [zoneId], references: [id])
+  type       String // rail | table
+  slotCount  Int
+  placements Placement[]
+}
+
+model CadenceRule {
+  id          String @id @default(cuid())
+  fixtureType String // rail | table
+  category    String // legging | bra | top | outerwear ...
+  sizeCounts  Json // { "XS": 2, "S": 3, ... } units per size to fill one cadence
+
+  @@unique([fixtureType, category])
+}
+
+model Placement {
+  id          String  @id @default(cuid())
+  fixtureId   String
+  fixture     Fixture @relation(fields: [fixtureId], references: [id], onDelete: Cascade)
+  slot        Int // ordered position on the fixture; adjacency depends on it
+  productId   String
+  colorFamily String
+
+  @@unique([fixtureId, slot])
+  @@index([productId])
+}
+
+model Unit {
+  epc       String @id // one row per RFID tag
+  variantId String
+  area      String // floor | back
+  status    String @default("in_stock") // in_stock | sold | damaged | missing | ghost_suspect
+
+  @@index([variantId])
+}
+
+model Scan {
+  id       String    @id @default(cuid())
+  type     String // full_count | floor
+  takenAt  DateTime
+  tagReads TagRead[]
+}
+
+// Raw reads, append-only.
+model TagRead {
+  id     Int      @id @default(autoincrement())
+  scanId String
+  scan   Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  epc    String
+  area   String?
+  readAt DateTime
+
+  @@index([scanId])
+  @@index([epc])
+}
+
+model GhostSuspect {
+  id           String   @id @default(cuid())
+  epc          String   @unique
+  signals      Json // which detectors fired, e.g. ["sold_but_read","never_moves"]
+  confidence   Float
+  lastSeenArea String?
+  resolution   String? // null (open) | loose_tag | item_found | not_found
+  createdAt    DateTime @default(now())
+  resolvedAt   DateTime?
+}
+
+model Proposal {
+  id             String     @id @default(cuid())
+  kind           String // fixture_swap | inventory_correction
+  payload        Json
+  diff           Json
+  status         String     @default("pending") // pending | approved | applied | rejected | undone
+  idempotencyKey String     @unique
+  createdAt      DateTime   @default(now())
+  auditLogs      AuditLog[]
+}
+
+model AuditLog {
+  id         String    @id @default(cuid())
+  proposalId String
+  proposal   Proposal  @relation(fields: [proposalId], references: [id])
+  before     Json
+  after      Json
+  appliedAt  DateTime  @default(now())
+  undoneAt   DateTime?
+}
+
+// Rolled up from orders for sales velocity.
+model SalesDaily {
+  variantId String
+  date      DateTime
+  units     Int
+
+  @@id([variantId, date])
+}
