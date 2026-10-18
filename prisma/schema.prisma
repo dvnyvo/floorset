@@ -41,6 +41,7 @@ model Session {
 model Zone {
   id       String    @id @default(cuid())
   name     String    @unique
+  department String   @default("womens") // womens | mens; only matching products can be placed here
   palette  Json // color families allowed in this zone, e.g. ["neutral","pastel"]
   fixtures Fixture[]
 }
