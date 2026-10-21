@@ -7,7 +7,40 @@ name = "floorset"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,write_metaobjects,write_metaobject_definitions"
+scopes = "write_products,write_inventory,read_locations,write_metaobjects,write_metaobject_definitions"
+
+# Floorset product attributes the rules engine reads (app-owned namespace: $app)
+[product.metafields.app.color_family]
+type = "single_line_text_field"
+name = "Color family"
+description = "black, neutral, bright, pastel or earth"
+
+  [product.metafields.app.color_family.access]
+  admin = "merchant_read_write"
+
+[product.metafields.app.category]
+type = "single_line_text_field"
+name = "Category"
+description = "legging, bra, top, outerwear, short, jogger"
+
+  [product.metafields.app.category.access]
+  admin = "merchant_read_write"
+
+[product.metafields.app.fixture_type]
+type = "single_line_text_field"
+name = "Fixture type"
+description = "rail, table or both"
+
+  [product.metafields.app.fixture_type.access]
+  admin = "merchant_read_write"
+
+[product.metafields.app.department]
+type = "single_line_text_field"
+name = "Department"
+description = "womens or mens"
+
+  [product.metafields.app.department.access]
+  admin = "merchant_read_write"
 
 [product.metafields.app.demo_info]
 type = "single_line_text_field"
