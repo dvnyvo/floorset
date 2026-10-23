@@ -18,7 +18,8 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
-    "seed": "node scripts/seed.ts"
+    "seed": "node scripts/seed.ts",
+    "gen-scans": "node scripts/gen-scans.ts"
   },
   "type": "module",
   "engines": {
