@@ -19,7 +19,8 @@
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
     "seed": "node scripts/seed.ts",
-    "gen-scans": "node scripts/gen-scans.ts"
+    "gen-scans": "node scripts/gen-scans.ts",
+    "test": "vitest run"
   },
   "type": "module",
   "engines": {
@@ -59,7 +60,8 @@
     "graphql-config": "^5.1.1",
     "prettier": "^3.6.2",
     "typescript": "^5.9.3",
-    "vite": "^6.3.6"
+    "vite": "^6.3.6",
+    "vitest": "^3.2.7"
   },
   "workspaces": [
     "extensions/*"
