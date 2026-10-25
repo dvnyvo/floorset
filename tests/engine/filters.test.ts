@@ -11,7 +11,7 @@ describe("fullSizeRun", () => {
     expect(r).toEqual({ ok: false, rule: "size_run", reason: "Broken size run: short S (1 of 3), XL (0 of 1)" });
   });
   it("ignores sizes the cadence doesn't need", () => {
-    const { XXS: _, ...noXxs } = deepBack();
+    const noXxs = { ...deepBack(), XXS: undefined };
     expect(fullSizeRun(candidate({ back: noXxs }), { ...RAIL_CADENCE, XXS: 0 }).ok).toBe(true);
   });
 });
