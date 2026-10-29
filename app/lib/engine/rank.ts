@@ -98,7 +98,8 @@ export function explain(c: Candidate, fixture: FixtureContext, slot: number, par
 
   const { left, right } = neighbors(fixture, slot);
   if (left && right && left.colorFamily === right.colorFamily) bits.push(`breaks up two ${left.colorFamily}s`);
-  else if (left || right) bits.push(`${c.colorFamily} between ${[left, right].filter(Boolean).map((n) => n!.colorFamily).join(" and ")}`);
+  else if (left && right) bits.push(`${c.colorFamily} between ${left.colorFamily} and ${right.colorFamily}`);
+  else if (left || right) bits.push(`${c.colorFamily} next to ${(left ?? right)!.colorFamily}`);
 
   if (parts.balance === 1) bits.push(`adds a ${c.category} to the ${fixture.type}`);
   bits.push(`${c.weeklyVelocity.toFixed(1)} sold/week`);

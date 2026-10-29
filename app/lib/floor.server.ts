@@ -1,7 +1,16 @@
 // Loads what the pages need by combining Shopify (catalog, counts) with Floorset's DB (layout, scans, tags).
 import db from "../db.server";
 import { replenish } from "./engine/replenish";
-import { SIZES, type FixtureType, type SizeCounts } from "./engine/types";
+import {
+  SIZES,
+  type CadenceLookup,
+  type Candidate,
+  type ColorFamily,
+  type FixtureContext,
+  type FixtureType,
+  type SizeCounts,
+  type SlotItem,
+} from "./engine/types";
 import { chronicShorts, readRates, type RateRow, type UnitInfo } from "./scans/reconcile";
 import { fetchCatalog, type AdminClient, type CatalogVariant } from "./shopify/catalog.server";
 
@@ -66,14 +75,14 @@ export interface SlotRow {
   reason: string;
 }
 
-/** Floor scan vs each fixture's cadence vs back stock (Shopify available minus what's on the floor). */
-export async function loadReplenishment(admin: AdminClient) {
+/** Latest floor scan + catalog + layout: the shared base for replenishment and the fixture view. */
+async function floorState(admin: AdminClient) {
   const scan = await db.scan.findFirst({
     where: { type: "floor" },
     orderBy: { takenAt: "desc" },
     include: { tagReads: { select: { epc: true } } },
   });
-  if (!scan) return { scan: null, fixtures: [] };
+  if (!scan) return null;
 
   const [{ variants }, units, ghosts, fixtures, rules] = await Promise.all([
     fetchCatalog(admin),
@@ -89,9 +98,20 @@ export async function loadReplenishment(admin: AdminClient) {
     if (!u || u.status === "sold" || ghosts.has(epc)) continue; // a sold or loose tag isn't stock on the floor
     onFloor.set(u.variantId, (onFloor.get(u.variantId) ?? 0) + 1);
   }
-  const byProduct = groupBy(variants, (v) => v.productId);
-  const cadenceFor = (type: string, category: string) =>
+  const floorOf = (vs: CatalogVariant[]) => sizeCounts(vs, (v) => onFloor.get(v.variantId) ?? 0);
+  const backOf = (vs: CatalogVariant[]) =>
+    sizeCounts(vs, (v) => Math.max(0, v.available - (onFloor.get(v.variantId) ?? 0)));
+  const cadenceFor: CadenceLookup = (type, category) =>
     rules.find((r) => r.fixtureType === type && r.category === category)?.sizeCounts as SizeCounts | undefined;
+
+  return { scan, variants, byProduct: groupBy(variants, (v) => v.productId), fixtures, floorOf, backOf, cadenceFor };
+}
+
+/** Floor scan vs each fixture's cadence vs back stock (Shopify available minus what's on the floor). */
+export async function loadReplenishment(admin: AdminClient) {
+  const st = await floorState(admin);
+  if (!st) return { scan: null, fixtures: [] };
+  const { scan, byProduct, fixtures, floorOf, backOf, cadenceFor } = st;
 
   return {
     scan: { id: scan.id, takenAt: scan.takenAt.toISOString(), reads: scan.tagReads.length },
@@ -103,9 +123,9 @@ export async function loadReplenishment(admin: AdminClient) {
       slotCount: f.slotCount,
       slots: f.placements.map((pl): SlotRow => {
         const vs = byProduct.get(pl.productId) ?? [];
-        const floor = sizeCounts(vs, (v) => onFloor.get(v.variantId) ?? 0);
-        const back = sizeCounts(vs, (v) => Math.max(0, v.available - (onFloor.get(v.variantId) ?? 0)));
-        const cadence = cadenceFor(f.type, vs[0]?.category ?? "");
+        const floor = floorOf(vs);
+        const back = backOf(vs);
+        const cadence = cadenceFor(f.type as FixtureType, vs[0]?.category ?? "");
         const r = replenish(cadence, floor, back);
         return {
           slot: pl.slot,
@@ -122,6 +142,54 @@ export async function loadReplenishment(admin: AdminClient) {
     })),
   };
 }
+
+/** Everything the rules engine needs to fill one slot: fixture context, candidates and cadences. */
+export async function loadFixture(admin: AdminClient, fixtureId: string) {
+  const st = await floorState(admin);
+  if (!st) return null;
+  const { scan, byProduct, fixtures, backOf, cadenceFor } = st;
+  const f = fixtures.find((x) => x.id === fixtureId);
+  if (!f) return null;
+
+  const placed = new Set((await db.placement.findMany({ select: { productId: true } })).map((p) => p.productId));
+  const since = new Date(scan.takenAt.getTime() - VELOCITY_DAYS * 86_400_000);
+  const sales = await db.salesDaily.groupBy({ by: ["variantId"], where: { date: { gte: since } }, _sum: { units: true } });
+  const soldByVariant = new Map(sales.map((s) => [s.variantId, s._sum.units ?? 0]));
+
+  const candidates: Candidate[] = [...byProduct.values()].map((vs) => ({
+    productId: vs[0].productId,
+    title: vs[0].productTitle,
+    category: vs[0].category,
+    department: vs[0].department,
+    colorFamily: vs[0].colorFamily,
+    fixtureType: vs[0].fixtureType,
+    back: backOf(vs),
+    damaged: sizeCounts(vs, (v) => v.damaged),
+    placed: placed.has(vs[0].productId),
+    weeklyVelocity: vs.reduce((n, v) => n + (soldByVariant.get(v.variantId) ?? 0), 0) / (VELOCITY_DAYS / 7),
+  }));
+  const byId = new Map(candidates.map((c) => [c.productId, c]));
+
+  const slots: (SlotItem | null)[] = Array.from({ length: f.slotCount }, () => null);
+  for (const pl of f.placements) {
+    const c = byId.get(pl.productId);
+    slots[pl.slot] = {
+      productId: pl.productId,
+      title: c?.title ?? "Unknown product",
+      category: c?.category ?? "",
+      colorFamily: pl.colorFamily as ColorFamily,
+    };
+  }
+  const fixture: FixtureContext = {
+    name: f.name,
+    type: f.type as FixtureType,
+    zone: { name: f.zone.name, department: f.zone.department, palette: f.zone.palette as ColorFamily[] },
+    slots,
+  };
+  return { id: f.id, fixture, candidates, cadenceFor };
+}
+
+const VELOCITY_DAYS = 28;
 
 function sizeCounts(vs: CatalogVariant[], n: (v: CatalogVariant) => number): SizeCounts {
   const out: SizeCounts = {};

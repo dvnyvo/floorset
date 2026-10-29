@@ -74,3 +74,11 @@ describe("rank", () => {
     expect(r.rejected[0]).toMatchObject({ rule: "no_cadence", reason: "No size cadence for bra on a table" });
   });
 });
+
+describe("explain wording", () => {
+  it("says 'next to' for an edge slot", () => {
+    const fx = rail([null, item("neutral", "bra", "B9")]);
+    const { picks } = rank({ fixture: fx, slot: 0, candidates: [candidate({ colorFamily: "black" })], cadenceFor });
+    expect(picks[0].reason).toContain("black next to neutral");
+  });
+});
