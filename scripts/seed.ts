@@ -92,7 +92,18 @@ async function main() {
   const locationId = locations.nodes[0].id;
   console.log(`location: ${locations.nodes[0].name}`);
 
-  // 2. Products via one bulk productSet. Shopify "available" = sellable + damaged for now;
+  // 2. Start clean: delete products from a previous seed so quantities (and the damaged move) start from zero.
+  const old = execute<{ products: { nodes: { id: string }[] } }>(
+    `{ products(first: 250, query: "tag:floorset-seed") { nodes { id } } }`,
+  ).products.nodes;
+  if (old.length) {
+    console.log(`deleting ${old.length} previously seeded products...`);
+    const del = /* GraphQL */ `mutation del($input: ProductDeleteInput!) { productDelete(input: $input) { userErrors { message } } }`;
+    const rows = old.map((p) => JSON.stringify({ input: { id: p.id } })).join("\n");
+    cli(["app", "bulk", "execute", "--query-file", tmp("del.graphql", del), "--variable-file", tmp("del.jsonl", rows), "--watch", "--output-file", join(dir, "del-out.jsonl")]);
+  }
+
+  // 3. Products via one bulk productSet. Shopify "available" = sellable + damaged for now;
   //    damaged units are moved to the damaged state in step 3.
   const qty = new Map<string, number>();
   for (const u of data.units) if (u.status !== "sold") qty.set(u.sku, (qty.get(u.sku) ?? 0) + 1);
@@ -118,8 +129,8 @@ async function main() {
   if (productId.size !== data.products.length) throw new Error(`expected ${data.products.length} products, got ${productId.size}`);
   console.log(`products in Shopify: ${productId.size}, variants: ${variant.size}`);
 
-  // 3. Damaged units -> Shopify's damaged inventory state.
-  // Compare-and-swap: expects available = seeded qty and damaged = 0, so a re-run fails loudly instead of double counting.
+  // 4. Damaged units -> Shopify's damaged inventory state.
+  // Compare-and-swap: expects available = seeded qty and damaged = 0, so a half-finished run fails loudly instead of double counting.
   const damaged = new Map<string, number>();
   for (const u of data.units) if (u.status === "damaged") damaged.set(u.sku, (damaged.get(u.sku) ?? 0) + 1);
   const move = execute<{ inventoryMoveQuantities: { userErrors: { message: string }[] } }>(
@@ -143,7 +154,7 @@ async function main() {
   if (move.inventoryMoveQuantities.userErrors.length) throw new Error(JSON.stringify(move.inventoryMoveQuantities.userErrors));
   console.log(`damaged units moved: ${data.units.filter((u) => u.status === "damaged").length}`);
 
-  // 4. Floorset database: replace all Floorset rows (sessions untouched).
+  // 5. Floorset database: replace all Floorset rows (sessions untouched).
   const db = new PrismaClient();
   try {
     await db.$transaction([

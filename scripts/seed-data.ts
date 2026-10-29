@@ -208,8 +208,8 @@ export function generate(seed = 42): SeedData {
         addUnits(sku, broken ? Math.max(0, cadence - 2) : cadence, "floor");
         addUnits(sku, broken ? 0 : Math.round(cadence * (1.5 + r() * 2.5)), "back");
       } else {
-        // Unplaced styles: back stock only, some with natural size gaps.
-        const n = r() < 0.12 ? 0 : Math.round(SIZE_CURVE[size] * (2 + r() * 8));
+        // Unplaced styles are the bench a swap draws from: mostly deep back stock, some with natural size gaps.
+        const n = r() < 0.08 ? 0 : Math.round(SIZE_CURVE[size] * (4 + r() * 10));
         addUnits(sku, n, "back");
       }
     }
