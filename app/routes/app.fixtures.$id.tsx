@@ -1,6 +1,16 @@
 import { useEffect, useState, type FormEvent } from "react";
-import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { data, useFetcher, useLoaderData, useNavigate, useSearchParams } from "react-router";
+import type {
+  ActionFunctionArgs,
+  HeadersFunction,
+  LoaderFunctionArgs,
+} from "react-router";
+import {
+  data,
+  useFetcher,
+  useLoaderData,
+  useNavigate,
+  useSearchParams,
+} from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
@@ -18,29 +28,49 @@ import {
   undoProposal,
   type SwapDiff,
 } from "../lib/proposals.server";
-import { cleanHistory, runCopilot, type ChatMessage } from "../lib/copilot.server";
+import {
+  cleanHistory,
+  runCopilot,
+  type ChatMessage,
+} from "../lib/copilot.server";
 
 async function load(request: Request, id: string) {
   const { admin } = await authenticate.admin(request);
   const fx = await loadFixture(admin, id);
-  if (!fx) throw data("Fixture not found, or no floor scan yet", { status: 404 });
+  if (!fx)
+    throw data("Fixture not found, or no floor scan yet", { status: 404 });
   const url = new URL(request.url);
-  const slot = Math.min(Math.max(0, Number(url.searchParams.get("slot")) || 0), fx.fixture.slots.length - 1);
+  const slot = Math.min(
+    Math.max(0, Number(url.searchParams.get("slot")) || 0),
+    fx.fixture.slots.length - 1,
+  );
   const prefs = prefsFromParams(url.searchParams);
   return { admin, fx, slot, prefs };
 }
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { fx, slot, prefs } = await load(request, params.id!);
-  const r = rank({ fixture: fx.fixture, slot, candidates: fx.candidates, cadenceFor: fx.cadenceFor, prefs });
+  const r = rank({
+    fixture: fx.fixture,
+    slot,
+    candidates: fx.candidates,
+    cadenceFor: fx.cadenceFor,
+    prefs,
+  });
   const proposals = await listProposals(fx.id);
   return {
     fixture: fx.fixture,
     slot,
     prefs,
-    picks: r.picks.map((p) => ({ ...p.candidate, score: p.score, reason: p.reason })),
+    picks: r.picks.map((p) => ({
+      ...p.candidate,
+      score: p.score,
+      reason: p.reason,
+    })),
     passedCount: r.passedCount,
-    rejected: r.rejected.slice(0, 25).map((x) => ({ ...x.candidate, stage: x.stage, reason: x.reason })),
+    rejected: r.rejected
+      .slice(0, 25)
+      .map((x) => ({ ...x.candidate, stage: x.stage, reason: x.reason })),
     rejectedCount: r.rejected.length,
     proposals: proposals.map((p) => ({
       id: p.id,
@@ -60,9 +90,21 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   try {
     switch (intent) {
       case "propose": {
-        const r = rank({ fixture: fx.fixture, slot, candidates: fx.candidates, cadenceFor: fx.cadenceFor, prefs });
-        const pick = r.picks.find((p) => p.candidate.productId === form.get("productId"));
-        if (!pick) return { error: "That item is no longer a valid pick. Refresh and try again." };
+        const r = rank({
+          fixture: fx.fixture,
+          slot,
+          candidates: fx.candidates,
+          cadenceFor: fx.cadenceFor,
+          prefs,
+        });
+        const pick = r.picks.find(
+          (p) => p.candidate.productId === form.get("productId"),
+        );
+        if (!pick)
+          return {
+            error:
+              "That item is no longer a valid pick. Refresh and try again.",
+          };
         const { payload, diff } = swapFor(fx, slot, pick.candidate);
         await proposeSwap(payload, diff);
         return { ok: "Swap proposed. Approve it below to apply." };
@@ -102,7 +144,13 @@ const SWATCH: Record<ColorFamily, string> = {
   earth: "#8b6a4b",
 };
 
-function Block({ item, highlight }: { item: { title: string; colorFamily: string; category: string } | null; highlight?: boolean }) {
+function Block({
+  item,
+  highlight,
+}: {
+  item: { title: string; colorFamily: string; category: string } | null;
+  highlight?: boolean;
+}) {
   return (
     <div
       title={item ? `${item.title} (${item.colorFamily})` : "Empty"}
@@ -111,8 +159,13 @@ function Block({ item, highlight }: { item: { title: string; colorFamily: string
         minWidth: 0,
         padding: "8px 6px",
         borderRadius: 6,
-        background: item ? SWATCH[item.colorFamily as ColorFamily] : "transparent",
-        color: item && ["black", "bright", "earth"].includes(item.colorFamily) ? "#fff" : "#1f1f1f",
+        background: item
+          ? SWATCH[item.colorFamily as ColorFamily]
+          : "transparent",
+        color:
+          item && ["black", "bright", "earth"].includes(item.colorFamily)
+            ? "#fff"
+            : "#1f1f1f",
         outline: highlight ? "3px solid #2c6ecb" : "1px solid #c9cccf",
         outlineOffset: highlight ? 2 : 0,
         fontSize: 12,
@@ -127,7 +180,13 @@ function Block({ item, highlight }: { item: { title: string; colorFamily: string
   );
 }
 
-const STATUS_TONE = { pending: "info", applied: "success", undone: "neutral", rejected: "neutral", approved: "info" } as const;
+const STATUS_TONE = {
+  pending: "info",
+  applied: "success",
+  undone: "neutral",
+  rejected: "neutral",
+  approved: "info",
+} as const;
 
 export default function FixtureView() {
   const d = useLoaderData<typeof loader>();
@@ -149,7 +208,8 @@ export default function FixtureView() {
   useEffect(() => {
     const r = act.data;
     if (r && "ok" in r && r.ok) shopify.toast.show(r.ok);
-    if (r && "error" in r && r.error) shopify.toast.show(r.error, { isError: true });
+    if (r && "error" in r && r.error)
+      shopify.toast.show(r.error, { isError: true });
   }, [act.data, shopify]);
 
   useEffect(() => {
@@ -171,14 +231,20 @@ export default function FixtureView() {
 
   const send = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const text = String(new FormData(e.currentTarget).get("message") ?? "").trim();
+    const text = String(
+      new FormData(e.currentTarget).get("message") ?? "",
+    ).trim();
     if (!text) return;
     const next = [...messages, { role: "user" as const, content: text }];
     setMessages(next);
     e.currentTarget.reset();
-    chat.submit({ intent: "chat", messages: JSON.stringify(next) }, { method: "post" });
+    chat.submit(
+      { intent: "chat", messages: JSON.stringify(next) },
+      { method: "post" },
+    );
   };
-  const post = (fields: Record<string, string>) => act.submit(fields, { method: "post" });
+  const post = (fields: Record<string, string>) =>
+    act.submit(fields, { method: "post" });
   const busy = act.state !== "idle";
 
   const colorPrefs: [string, ColorFamily[] | undefined][] = [
@@ -199,8 +265,15 @@ export default function FixtureView() {
           <s-text>Before (click a slot to pick it)</s-text>
           <div style={{ display: "flex", gap: 8 }}>
             {d.fixture.slots.map((s, i) => (
-              <a key={i} href={link(d.prefs, i)} style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
-                onClick={(e) => { e.preventDefault(); navigate(link(d.prefs, i)); }}>
+              <a
+                key={i}
+                href={link(d.prefs, i)}
+                style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  navigate(link(d.prefs, i));
+                }}
+              >
                 <Block item={s} highlight={i === d.slot} />
               </a>
             ))}
@@ -212,7 +285,8 @@ export default function FixtureView() {
             ))}
           </div>
           <s-text color="subdued">
-            {d.fixture.zone.name} palette: {d.fixture.zone.palette.join(", ")} · {d.fixture.slots[d.slot]?.title ?? "Empty slot"}
+            {d.fixture.zone.name} palette: {d.fixture.zone.palette.join(", ")} ·{" "}
+            {d.fixture.slots[d.slot]?.title ?? "Empty slot"}
           </s-text>
         </s-stack>
       </s-section>
@@ -220,11 +294,18 @@ export default function FixtureView() {
       <s-section heading="Refine">
         <s-stack gap="small">
           <s-stack direction="inline" gap="small">
-            <s-button href={link({ ...d.prefs, category: undefined })} variant={d.prefs.category ? "secondary" : "primary"}>
+            <s-button
+              href={link({ ...d.prefs, category: undefined })}
+              variant={d.prefs.category ? "secondary" : "primary"}
+            >
               Any category
             </s-button>
             {CATEGORIES.map((c) => (
-              <s-button key={c} href={link({ ...d.prefs, category: c })} variant={d.prefs.category === c ? "primary" : "secondary"}>
+              <s-button
+                key={c}
+                href={link({ ...d.prefs, category: c })}
+                variant={d.prefs.category === c ? "primary" : "secondary"}
+              >
                 {c}
               </s-button>
             ))}
@@ -234,13 +315,22 @@ export default function FixtureView() {
               <s-button
                 key={label}
                 href={link({ ...d.prefs, colorFamilies: colors })}
-                variant={(d.prefs.colorFamilies ?? []).join() === (colors ?? []).join() ? "primary" : "secondary"}
+                variant={
+                  (d.prefs.colorFamilies ?? []).join() === (colors ?? []).join()
+                    ? "primary"
+                    : "secondary"
+                }
               >
                 {label}
               </s-button>
             ))}
             <s-button
-              href={link({ ...d.prefs, weights: d.prefs.weights?.contrast ? undefined : { contrast: 1 } })}
+              href={link({
+                ...d.prefs,
+                weights: d.prefs.weights?.contrast
+                  ? undefined
+                  : { contrast: 1 },
+              })}
               variant={d.prefs.weights?.contrast ? "primary" : "secondary"}
             >
               More contrast
@@ -253,8 +343,18 @@ export default function FixtureView() {
         {d.picks.length ? (
           <s-stack gap="base">
             {d.picks.map((p, i) => (
-              <s-box key={p.productId} padding="base" border="base" borderRadius="base">
-                <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+              <s-box
+                key={p.productId}
+                padding="base"
+                border="base"
+                borderRadius="base"
+              >
+                <s-stack
+                  direction="inline"
+                  gap="base"
+                  alignItems="center"
+                  justifyContent="space-between"
+                >
                   <s-stack gap="small-200">
                     <s-text type="strong">
                       {i + 1}. {p.title}
@@ -262,7 +362,12 @@ export default function FixtureView() {
                     <s-text>{p.reason}</s-text>
                     <s-text color="subdued">Score {p.score.toFixed(2)}</s-text>
                   </s-stack>
-                  <s-button disabled={busy || !d.fixture.slots[d.slot]} onClick={() => post({ intent: "propose", productId: p.productId })}>
+                  <s-button
+                    disabled={busy || !d.fixture.slots[d.slot]}
+                    onClick={() =>
+                      post({ intent: "propose", productId: p.productId })
+                    }
+                  >
                     Propose swap
                   </s-button>
                 </s-stack>
@@ -270,31 +375,47 @@ export default function FixtureView() {
             ))}
           </s-stack>
         ) : (
-          <s-paragraph>Nothing passes every rule with these preferences. See the rejections below.</s-paragraph>
+          <s-paragraph>
+            Nothing passes every rule with these preferences. See the rejections
+            below.
+          </s-paragraph>
         )}
       </s-section>
 
-      <s-section heading="Copilot">
-        <s-stack gap="small">
-          {!d.copilot && (
-            <s-banner tone="info">Add ANTHROPIC_API_KEY to .env to chat. Ranking and refine work without it.</s-banner>
-          )}
-          {messages.map((m, i) => (
-            <s-box key={i} padding="small" background={m.role === "user" ? "subdued" : "transparent"} borderRadius="base">
-              <s-text type={m.role === "user" ? "strong" : "generic"}>{m.content}</s-text>
-            </s-box>
-          ))}
-          {chat.state !== "idle" && <s-text color="subdued">Thinking…</s-text>}
-          <form onSubmit={send}>
-            <s-stack direction="inline" gap="small" alignItems="end">
-              <s-text-field name="message" label="Ask the copilot" placeholder="Something brighter, but not a legging" />
-              <s-button type="submit" disabled={!d.copilot || chat.state !== "idle"}>
-                Send
-              </s-button>
-            </s-stack>
-          </form>
-        </s-stack>
-      </s-section>
+      {/* Shown only when ANTHROPIC_API_KEY is set; everything else works without it. */}
+      {d.copilot && (
+        <s-section heading="Copilot">
+          <s-stack gap="small">
+            {messages.map((m, i) => (
+              <s-box
+                key={i}
+                padding="small"
+                background={m.role === "user" ? "subdued" : "transparent"}
+                borderRadius="base"
+              >
+                <s-text type={m.role === "user" ? "strong" : "generic"}>
+                  {m.content}
+                </s-text>
+              </s-box>
+            ))}
+            {chat.state !== "idle" && (
+              <s-text color="subdued">Thinking…</s-text>
+            )}
+            <form onSubmit={send}>
+              <s-stack direction="inline" gap="small" alignItems="end">
+                <s-text-field
+                  name="message"
+                  label="Ask the copilot"
+                  placeholder="Something brighter, but not a legging"
+                />
+                <s-button type="submit" disabled={chat.state !== "idle"}>
+                  Send
+                </s-button>
+              </s-stack>
+            </form>
+          </s-stack>
+        </s-section>
+      )}
 
       <s-section heading="Proposals">
         {d.proposals.length ? (
@@ -308,24 +429,48 @@ export default function FixtureView() {
               {d.proposals.map((p) => (
                 <s-table-row key={p.id}>
                   <s-table-cell>
-                    Slot {p.diff.slot + 1}: {p.diff.out.title} → {p.diff.in.title}
+                    Slot {p.diff.slot + 1}: {p.diff.out.title} →{" "}
+                    {p.diff.in.title}
                   </s-table-cell>
                   <s-table-cell>
-                    <s-badge tone={STATUS_TONE[p.status as keyof typeof STATUS_TONE] ?? "neutral"}>{p.status}</s-badge>
+                    <s-badge
+                      tone={
+                        STATUS_TONE[p.status as keyof typeof STATUS_TONE] ??
+                        "neutral"
+                      }
+                    >
+                      {p.status}
+                    </s-badge>
                   </s-table-cell>
                   <s-table-cell>
                     {p.status === "pending" && (
                       <s-stack direction="inline" gap="small">
-                        <s-button variant="primary" disabled={busy} onClick={() => post({ intent: "apply", proposalId: p.id })}>
+                        <s-button
+                          variant="primary"
+                          disabled={busy}
+                          onClick={() =>
+                            post({ intent: "apply", proposalId: p.id })
+                          }
+                        >
                           Approve &amp; apply
                         </s-button>
-                        <s-button disabled={busy} onClick={() => post({ intent: "reject", proposalId: p.id })}>
+                        <s-button
+                          disabled={busy}
+                          onClick={() =>
+                            post({ intent: "reject", proposalId: p.id })
+                          }
+                        >
                           Reject
                         </s-button>
                       </s-stack>
                     )}
                     {p.status === "applied" && (
-                      <s-button disabled={busy} onClick={() => post({ intent: "undo", proposalId: p.id })}>
+                      <s-button
+                        disabled={busy}
+                        onClick={() =>
+                          post({ intent: "undo", proposalId: p.id })
+                        }
+                      >
                         Undo
                       </s-button>
                     )}
@@ -351,7 +496,17 @@ export default function FixtureView() {
               <s-table-row key={x.productId}>
                 <s-table-cell>{x.title}</s-table-cell>
                 <s-table-cell>
-                  <s-badge tone={x.stage === "visual" ? "warning" : x.stage === "preference" ? "info" : "neutral"}>{x.stage}</s-badge>
+                  <s-badge
+                    tone={
+                      x.stage === "visual"
+                        ? "warning"
+                        : x.stage === "preference"
+                          ? "info"
+                          : "neutral"
+                    }
+                  >
+                    {x.stage}
+                  </s-badge>
                 </s-table-cell>
                 <s-table-cell>{x.reason}</s-table-cell>
               </s-table-row>
@@ -363,4 +518,5 @@ export default function FixtureView() {
   );
 }
 
-export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);
+export const headers: HeadersFunction = (headersArgs) =>
+  boundary.headers(headersArgs);
