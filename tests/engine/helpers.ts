@@ -13,7 +13,7 @@ export function candidate(over: Partial<Candidate> = {}): Candidate {
     title: over.title ?? "Test Legging - Lilac",
     category: "legging",
     department: "womens",
-    colorFamily: "pastel",
+    colorFamily: "white",
     fixtureType: "both",
     back: deepBack(),
     damaged: {},
@@ -30,6 +30,6 @@ export const item = (colorFamily: ColorFamily, category = "top", id = `${categor
   colorFamily,
 });
 
-export function rail(slots: (SlotItem | null)[], palette: ColorFamily[] = ["neutral", "pastel", "black"]): FixtureContext {
+export function rail(slots: (SlotItem | null)[], palette: ColorFamily[] = ["grey", "white", "black"]): FixtureContext {
   return { name: "Zone 2 Rail 1", type: "rail", zone: { name: "Zone 2", department: "womens", palette }, slots };
 }

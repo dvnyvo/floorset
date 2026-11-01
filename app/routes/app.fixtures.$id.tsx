@@ -15,6 +15,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { rank } from "../lib/engine/rank";
+import { COLORS, colorsIn } from "../lib/engine/colors";
 import type { ColorFamily, Preferences } from "../lib/engine/types";
 import { loadFixture } from "../lib/floor.server";
 import { CATEGORIES, prefsFromParams, prefsToParams } from "../lib/prefs";
@@ -68,6 +69,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       reason: p.reason,
     })),
     passedCount: r.passedCount,
+    fallback: r.fallback,
     rejected: r.rejected
       .slice(0, 25)
       .map((x) => ({ ...x.candidate, stage: x.stage, reason: x.reason })),
@@ -136,14 +138,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
   }
 };
 
-const SWATCH: Record<ColorFamily, string> = {
-  black: "#1f1f1f",
-  neutral: "#d9cfc1",
-  bright: "#e4572e",
-  pastel: "#f2c4d6",
-  earth: "#8b6a4b",
-};
-
 function Block({
   item,
   highlight,
@@ -159,13 +153,8 @@ function Block({
         minWidth: 0,
         padding: "8px 6px",
         borderRadius: 6,
-        background: item
-          ? SWATCH[item.colorFamily as ColorFamily]
-          : "transparent",
-        color:
-          item && ["black", "bright", "earth"].includes(item.colorFamily)
-            ? "#fff"
-            : "#1f1f1f",
+        background: item ? (COLORS[item.colorFamily as ColorFamily]?.hex ?? "#ccc") : "transparent",
+        color: item && (COLORS[item.colorFamily as ColorFamily]?.tone ?? 1) < 0.5 ? "#fff" : "#1f1f1f",
         outline: highlight ? "3px solid #2c6ecb" : "1px solid #c9cccf",
         outlineOffset: highlight ? 2 : 0,
         fontSize: 12,
@@ -249,9 +238,9 @@ export default function FixtureView() {
 
   const colorPrefs: [string, ColorFamily[] | undefined][] = [
     ["Any color", undefined],
-    ["Brighter", ["bright", "pastel"]],
-    ["Darker", ["black", "earth"]],
-    ["Neutrals", ["neutral"]],
+    ["Darker", colorsIn("dark")],
+    ["Lighter", colorsIn("light")],
+    ["Brighter", colorsIn("bright")],
   ];
 
   return (
@@ -260,9 +249,10 @@ export default function FixtureView() {
         Replenishment
       </s-link>
 
-      <s-section heading="Before and after">
+      <s-section heading={`Before and after · ${d.fixture.name}`}>
         <s-stack gap="small">
-          <s-text>Before (click a slot to pick it)</s-text>
+          <s-text type="strong">Before · {d.fixture.name}</s-text>
+          <s-text color="subdued">Click a slot to find a replacement for it.</s-text>
           <div style={{ display: "flex", gap: 8 }}>
             {d.fixture.slots.map((s, i) => (
               <a
@@ -278,7 +268,12 @@ export default function FixtureView() {
               </a>
             ))}
           </div>
-          <s-text>After, with the top pick</s-text>
+          <s-text type="strong">After · {d.fixture.name}</s-text>
+          <s-text color="subdued">
+            {top
+              ? `With the top pick, ${top.title}${d.fallback ? " (fills the size run once, no back-up stock)" : ""}`
+              : "No item passes every rule for this slot, so nothing changes."}
+          </s-text>
           <div style={{ display: "flex", gap: 8 }}>
             {after.map((s, i) => (
               <Block key={i} item={s} highlight={i === d.slot} />
@@ -339,7 +334,15 @@ export default function FixtureView() {
         </s-stack>
       </s-section>
 
-      <s-section heading={`Top picks (${d.passedCount} pass every rule)`}>
+      <s-section
+        heading={d.fallback ? `Fallback picks (${d.passedCount})` : `Top picks (${d.passedCount} pass every rule)`}
+      >
+        {d.fallback && (
+          <s-banner tone="warning">
+            No item has enough back stock to refill this slot twice. These can fill the full size run once, which still
+            beats leaving a broken run on the floor. Reorder or plan the next swap soon.
+          </s-banner>
+        )}
         {d.picks.length ? (
           <s-stack gap="base">
             {d.picks.map((p, i) => (

@@ -1,7 +1,8 @@
 // Ranking preferences <-> URL search params, so a refined view is shareable and the copilot can set it.
-import type { ColorFamily, Preferences } from "./engine/types";
+import { COLOR_FAMILIES, type ColorFamily } from "./engine/colors";
+import type { Preferences } from "./engine/types";
 
-export const COLOR_FAMILIES: ColorFamily[] = ["black", "neutral", "bright", "pastel", "earth"];
+export { COLOR_FAMILIES };
 export const CATEGORIES = ["legging", "bra", "top", "outerwear", "short", "jogger"];
 const CONTRAST_BOOST = 0.45; // "more contrast": weight up from the default 0.15
 

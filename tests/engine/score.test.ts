@@ -15,14 +15,14 @@ describe("score parts", () => {
   });
 
   it("rewards categories the fixture lacks", () => {
-    const fixture = rail([item("black", "legging"), null, item("pastel", "top")]);
+    const fixture = rail([item("black", "legging"), null, item("white", "top")]);
     expect(balance(candidate({ category: "bra" }), fixture, 1, 2)).toBe(1);
     expect(balance(candidate({ category: "legging" }), fixture, 1, 2)).toBe(0.5);
   });
 
   it("measures tone distance from neighbors", () => {
     const fixture = rail([item("black"), null, item("black")]);
-    expect(contrast(candidate({ colorFamily: "pastel" }), fixture, 1)).toBe(1);
+    expect(contrast(candidate({ colorFamily: "white" }), fixture, 1)).toBe(1);
     expect(contrast(candidate({ colorFamily: "black" }), fixture, 1)).toBe(0);
     expect(contrast(candidate(), rail([null]), 0)).toBe(0.5);
   });

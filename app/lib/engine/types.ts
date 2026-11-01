@@ -3,7 +3,8 @@
 export const SIZES = ["XXS", "XS", "S", "M", "L", "XL"] as const;
 export type Size = (typeof SIZES)[number];
 export type SizeCounts = Partial<Record<Size, number>>;
-export type ColorFamily = "black" | "neutral" | "bright" | "pastel" | "earth";
+import type { ColorFamily } from "./colors";
+export type { ColorFamily };
 export type FixtureType = "rail" | "table";
 
 /** A style-color that could fill a slot. Counts are sellable units only. */
@@ -48,7 +49,7 @@ export interface Weights {
 export interface Preferences {
   weights?: Partial<Weights>;
   category?: string; // "I want a top"
-  colorFamilies?: ColorFamily[]; // "something brighter" -> ["bright", "pastel"]
+  colorFamilies?: ColorFamily[]; // "something brighter" -> ["red", "blue", "pink"]
 }
 
 export interface EngineConfig {

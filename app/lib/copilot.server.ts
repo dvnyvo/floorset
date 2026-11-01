@@ -77,6 +77,7 @@ export async function runCopilot(
       return JSON.stringify({
         picks: r.picks.map((p) => ({ productId: p.candidate.productId, title: p.candidate.title, score: +p.score.toFixed(2), reason: p.reason })),
         passed: r.passedCount,
+        fallback: r.fallback, // true = no item can refill twice; picks only fill the run once
         topRejections: r.rejected.slice(0, 8).map((x) => ({ title: x.candidate.title, rule: x.rule, reason: x.reason })),
       });
     },

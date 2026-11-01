@@ -3,7 +3,9 @@
 
 export const SIZES = ["XXS", "XS", "S", "M", "L", "XL"] as const;
 export type Size = (typeof SIZES)[number];
-export type ColorFamily = "black" | "neutral" | "bright" | "pastel" | "earth";
+export type ColorFamily =
+  | "black" | "navy" | "espresso" | "burgundy" | "olive" | "blue"
+  | "red" | "grey" | "pink" | "lilac" | "cream" | "white";
 export type Category = "legging" | "bra" | "top" | "outerwear" | "short" | "jogger";
 export type FixtureType = "rail" | "table";
 export type ProductFixtureType = FixtureType | "both";
@@ -49,12 +51,20 @@ export function rng(seed: number) {
   };
 }
 
+// Colorway names per color family (a "Midnight" colorway is in the navy family).
 const COLORS: Record<ColorFamily, string[]> = {
   black: ["Black", "Onyx"],
-  neutral: ["Bone", "Taupe", "Heather Grey", "Ivory"],
-  bright: ["Cobalt", "Coral", "Lime"],
-  pastel: ["Lilac", "Sky", "Blush"],
-  earth: ["Olive", "Espresso", "Rust"],
+  navy: ["Navy", "Midnight"],
+  espresso: ["Espresso", "Mocha"],
+  burgundy: ["Burgundy", "Merlot"],
+  olive: ["Olive", "Moss"],
+  blue: ["Cobalt", "Ocean"],
+  red: ["Cherry", "Scarlet"],
+  grey: ["Heather Grey", "Slate"],
+  pink: ["Blush", "Rose"],
+  lilac: ["Lilac", "Lavender"],
+  cream: ["Bone", "Ivory"],
+  white: ["White", "Chalk"],
 };
 const FAMILIES = Object.keys(COLORS) as ColorFamily[];
 
@@ -79,11 +89,11 @@ const STYLE_NAMES = [
 export const SIZE_CURVE: Record<Size, number> = { XXS: 0.5, XS: 0.8, S: 1.3, M: 1.3, L: 0.9, XL: 0.5 };
 
 const ZONES: SeedZone[] = [
-  { name: "Zone 1", department: "womens", palette: ["black", "neutral"] },
-  { name: "Zone 2", department: "womens", palette: ["neutral", "pastel"] },
-  { name: "Zone 3", department: "womens", palette: ["bright", "black", "neutral"] },
-  { name: "Zone 4", department: "womens", palette: ["earth", "neutral", "pastel"] },
-  { name: "Men's", department: "mens", palette: ["black", "neutral", "earth"] },
+  { name: "Zone 1", department: "womens", palette: ["black", "grey", "white", "navy"] },
+  { name: "Zone 2", department: "womens", palette: ["cream", "pink", "lilac", "grey"] },
+  { name: "Zone 3", department: "womens", palette: ["black", "red", "blue", "white"] },
+  { name: "Zone 4", department: "womens", palette: ["espresso", "olive", "cream", "burgundy"] },
+  { name: "Men's", department: "mens", palette: ["black", "navy", "grey", "olive", "espresso"] },
 ];
 
 const RAIL_CADENCE: Record<Size, number> = { XXS: 1, XS: 2, S: 3, M: 3, L: 2, XL: 1 };
@@ -118,7 +128,7 @@ export function generate(seed = 42): SeedData {
     const category = department === "womens" ? womensCats[i % womensCats.length] : mensCats[i % mensCats.length];
     const styleNo = String(1000 + i * 7);
     // Men's colorways lean on their zone's palette so the department has candidates.
-    const familyPool = department === "mens" ? (["black", "neutral", "earth", "bright"] as ColorFamily[]) : FAMILIES;
+    const familyPool = department === "mens" ? (["black", "navy", "grey", "olive", "espresso", "blue"] as ColorFamily[]) : FAMILIES;
     for (const family of shuffle([...familyPool]).slice(0, 3)) {
       const colorName = pick(COLORS[family]);
       const c = CATEGORY[category];

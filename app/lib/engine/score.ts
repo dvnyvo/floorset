@@ -1,9 +1,8 @@
 // Stage 3: soft score used to rank candidates that pass every hard rule.
-import { SIZES, type Candidate, type ColorFamily, type EngineConfig, type FixtureContext, type Weights } from "./types";
+import { COLORS } from "./colors";
+import { SIZES, type Candidate, type EngineConfig, type FixtureContext, type Weights } from "./types";
 import { neighbors, others } from "./visual";
 
-// Rough lightness of each family, 0 (dark) to 1 (light); contrast = tone distance.
-const TONE: Record<ColorFamily, number> = { black: 0, earth: 0.35, bright: 0.6, neutral: 0.85, pastel: 1 };
 
 export type ScoreParts = Record<keyof Weights, number>;
 
@@ -31,7 +30,7 @@ export function contrast(c: Candidate, fixture: FixtureContext, slot: number): n
   const { left, right } = neighbors(fixture, slot);
   const ns = [left, right].filter((n) => n !== null);
   if (!ns.length) return 0.5;
-  return ns.reduce((sum, n) => sum + Math.abs(TONE[c.colorFamily] - TONE[n.colorFamily]), 0) / ns.length;
+  return ns.reduce((sum, n) => sum + Math.abs(COLORS[c.colorFamily].tone - COLORS[n.colorFamily].tone), 0) / ns.length;
 }
 
 export function score(

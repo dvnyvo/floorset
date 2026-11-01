@@ -5,10 +5,10 @@ import { ProposalError, swapFor } from "../../app/lib/proposals.server";
 
 describe("toPreferences", () => {
   it("drops unknown categories and colors so prefs can only narrow", () => {
-    expect(toPreferences({ category: "hats", colorFamilies: ["bright", "gold"] })).toEqual({ colorFamilies: ["bright"] });
+    expect(toPreferences({ category: "hats", colorFamilies: ["red", "gold"] })).toEqual({ colorFamilies: ["red"] });
   });
   it("round-trips through URL params", () => {
-    const p = toPreferences({ category: "top", colorFamilies: ["bright", "pastel"], contrastBoost: true });
+    const p = toPreferences({ category: "top", colorFamilies: ["red", "white"], contrastBoost: true });
     expect(prefsFromParams(prefsToParams(p))).toEqual(p);
   });
   it("keeps unrelated params like slot", () => {
@@ -39,12 +39,12 @@ describe("swapFor", () => {
     fixture: { name: "Zone 1 Rail 2", slots: [{ productId: "p1", title: "Old", colorFamily: "black" }, null] },
   };
   it("records what goes out and what comes in", () => {
-    const { payload, diff } = swapFor(fx, 0, { productId: "p9", title: "New", colorFamily: "bright" });
+    const { payload, diff } = swapFor(fx, 0, { productId: "p9", title: "New", colorFamily: "red" });
     expect(payload).toEqual({ fixtureId: "f1", slot: 0, productId: "p9" });
     expect(diff.out.title).toBe("Old");
-    expect(diff.in.colorFamily).toBe("bright");
+    expect(diff.in.colorFamily).toBe("red");
   });
   it("refuses an empty slot", () => {
-    expect(() => swapFor(fx, 1, { productId: "p9", title: "New", colorFamily: "bright" })).toThrow(ProposalError);
+    expect(() => swapFor(fx, 1, { productId: "p9", title: "New", colorFamily: "red" })).toThrow(ProposalError);
   });
 });

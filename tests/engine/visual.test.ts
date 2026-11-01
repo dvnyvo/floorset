@@ -4,19 +4,19 @@ import { candidate, item, rail } from "./helpers";
 
 describe("zoneTheme", () => {
   it("accepts a color family in the zone palette", () => {
-    expect(zoneTheme(candidate({ colorFamily: "pastel" }), rail([])).ok).toBe(true);
+    expect(zoneTheme(candidate({ colorFamily: "white" }), rail([])).ok).toBe(true);
   });
   it("explains a palette miss", () => {
-    expect(zoneTheme(candidate({ colorFamily: "bright" }), rail([], ["neutral", "pastel"]))).toEqual({
+    expect(zoneTheme(candidate({ colorFamily: "red" }), rail([], ["grey", "white"]))).toEqual({
       ok: false,
       rule: "zone_palette",
-      reason: "Bright isn't in Zone 2's palette (neutral, pastel)",
+      reason: "Red isn't in Zone 2's palette (grey, white)",
     });
   });
 });
 
 describe("colorAdjacency", () => {
-  const fixture = rail([item("black"), null, item("black"), item("neutral")]);
+  const fixture = rail([item("black"), null, item("black"), item("grey")]);
 
   it("flags three in a row when both neighbors match", () => {
     expect(colorAdjacency(candidate({ colorFamily: "black" }), fixture, 1)).toMatchObject({
@@ -25,26 +25,26 @@ describe("colorAdjacency", () => {
     });
   });
   it("flags a single matching neighbor and says which side", () => {
-    expect(colorAdjacency(candidate({ colorFamily: "neutral" }), fixture, 2)).toMatchObject({
+    expect(colorAdjacency(candidate({ colorFamily: "grey" }), fixture, 2)).toMatchObject({
       ok: false,
-      reason: "Same color family (neutral) as the item to its right",
+      reason: "Same color family (grey) as the item to its right",
     });
   });
   it("passes a different family between two others", () => {
-    expect(colorAdjacency(candidate({ colorFamily: "pastel" }), fixture, 1).ok).toBe(true);
+    expect(colorAdjacency(candidate({ colorFamily: "white" }), fixture, 1).ok).toBe(true);
   });
   it("ignores the item being replaced", () => {
     // slot 2 currently black; replacing it with black must only compare to slots 1 and 3
-    expect(colorAdjacency(candidate({ colorFamily: "pastel" }), fixture, 2).ok).toBe(true);
+    expect(colorAdjacency(candidate({ colorFamily: "white" }), fixture, 2).ok).toBe(true);
   });
   it("handles end slots with one neighbor", () => {
-    expect(colorAdjacency(candidate({ colorFamily: "neutral" }), fixture, 3).ok).toBe(true);
+    expect(colorAdjacency(candidate({ colorFamily: "grey" }), fixture, 3).ok).toBe(true);
     expect(colorAdjacency(candidate({ colorFamily: "black" }), rail([null, item("black")]), 0).ok).toBe(false);
   });
 });
 
 describe("categoryMix", () => {
-  const fixture = rail([item("black", "legging", "a"), item("neutral", "legging", "b"), item("pastel", "top")]);
+  const fixture = rail([item("black", "legging", "a"), item("grey", "legging", "b"), item("white", "top")]);
 
   it("blocks a third legging style on the rail", () => {
     expect(categoryMix(candidate({ category: "legging" }), fixture, 2, 2)).toEqual({

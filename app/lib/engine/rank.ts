@@ -29,7 +29,22 @@ export interface RankInput {
   config?: EngineConfig;
 }
 
-export function rank({ fixture, slot, candidates, cadenceFor, prefs = {}, config = defaultConfig }: RankInput) {
+/**
+ * Strict pass first (back stock refills the run 2x). If nothing passes, fall back to items that can
+ * fill the size run at least once: a full run with no back-up beats a broken run left on the floor.
+ */
+export function rank(input: RankInput) {
+  const strict = rankOnce(input, false);
+  if (strict.picks.length) return strict;
+  const lenient = rankOnce(input, true);
+  return lenient.picks.length ? lenient : strict;
+}
+
+function rankOnce(
+  { fixture, slot, candidates, cadenceFor, prefs = {}, config = defaultConfig }: RankInput,
+  fallback: boolean,
+) {
+  if (fallback) config = { ...config, depthMultiplier: 1 };
   const weights = { ...config.weights, ...prefs.weights };
   const passed: Candidate[] = [];
   const rejected: Rejection[] = [];
@@ -65,7 +80,8 @@ export function rank({ fixture, slot, candidates, cadenceFor, prefs = {}, config
   const picks: Pick[] = passed
     .map((c) => {
       const s = score(c, passed, fixture, slot, config, weights);
-      return { candidate: c, score: s.total, parts: s.parts, reason: explain(c, fixture, slot, s.parts, cadenceFor) };
+      const reason = explain(c, fixture, slot, s.parts, cadenceFor);
+      return { candidate: c, score: s.total, parts: s.parts, reason: fallback ? `${reason}. Fallback: fills the size run once, no back-up stock` : reason };
     })
     .sort((a, b) => b.score - a.score || a.candidate.title.localeCompare(b.candidate.title))
     .slice(0, config.topN);
@@ -74,7 +90,7 @@ export function rank({ fixture, slot, candidates, cadenceFor, prefs = {}, config
   const order: Record<Stage, number> = { visual: 0, preference: 1, stock: 2 };
   rejected.sort((a, b) => order[a.stage] - order[b.stage] || b.candidate.weeklyVelocity - a.candidate.weeklyVelocity);
 
-  return { picks, rejected, passedCount: passed.length };
+  return { picks, rejected, passedCount: passed.length, fallback };
 }
 
 function preferenceCategory(c: Candidate, prefs: Preferences): RuleResult {
@@ -89,7 +105,7 @@ function preferenceColor(c: Candidate, prefs: Preferences): RuleResult {
     : fail("pref_color", `${c.colorFamily} isn't one of the requested colors (${prefs.colorFamilies.join(", ")})`);
 }
 
-/** One-line reason, e.g. "Full XXS–XL run, 28 in back, fits Zone 2 palette, breaks up two neutrals, adds a top". */
+/** One-line reason, e.g. "Full XXS–XL run, 28 in back, fits Zone 2 palette, breaks up two greys, adds a top". */
 export function explain(c: Candidate, fixture: FixtureContext, slot: number, parts: ScoreParts, cadenceFor: CadenceLookup) {
   const cadence = cadenceFor(fixture.type, c.category) ?? {};
   const run = SIZES.filter((s) => (cadence[s] ?? 0) > 0);

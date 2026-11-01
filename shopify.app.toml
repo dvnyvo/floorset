@@ -13,7 +13,7 @@ scopes = "write_products,write_inventory,read_locations"
 [product.metafields.app.color_family]
 type = "single_line_text_field"
 name = "Color family"
-description = "black, neutral, bright, pastel or earth"
+description = "black, navy, espresso, burgundy, olive, blue, red, grey, pink, lilac, cream or white"
 
   [product.metafields.app.color_family.access]
   admin = "merchant_read_write"

@@ -105,7 +105,7 @@ export async function fetchCatalog(admin: AdminClient): Promise<{ locationId: st
           productId: p.id,
           productTitle: p.title,
           category: p.category.value,
-          colorFamily: (p.colorFamily?.value ?? "neutral") as ColorFamily,
+          colorFamily: (p.colorFamily?.value ?? "grey") as ColorFamily,
           fixtureType: (p.fixtureType?.value ?? "both") as FixtureType | "both",
           department: p.department?.value ?? "womens",
           available: q.available ?? 0,
