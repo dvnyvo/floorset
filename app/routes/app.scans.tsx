@@ -6,6 +6,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { parseScanCsv } from "../lib/scans/parse";
+import { runDetection } from "../lib/ghosts.server";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = { full_count: "Weekly full count", floor: "Morning floor scan" } as const;
@@ -26,6 +27,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<ActionRes
 
   if (form.get("intent") === "delete") {
     await db.scan.delete({ where: { id: String(form.get("id")) } });
+    await runDetection();
     return { ok: true, message: "Scan deleted" };
   }
 
@@ -41,10 +43,11 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<ActionRes
   if (!parsed.reads.length) return { ok: false, errors: parsed.errors.length ? parsed.errors : ["No valid reads in the file."] };
 
   await db.scan.create({ data: { type, takenAt, tagReads: { createMany: { data: parsed.reads } } } });
+  const { open } = await runDetection();
   const skipped = parsed.errors.length ? `, skipped ${parsed.errors.length}${parsed.errors.length === 20 ? "+" : ""} bad rows` : "";
   return {
     ok: true,
-    message: `Imported ${parsed.reads.length.toLocaleString()} reads (${parsed.duplicates} repeat reads merged${skipped}).`,
+    message: `Imported ${parsed.reads.length.toLocaleString()} reads (${parsed.duplicates} repeat reads merged${skipped}). ${open} possible loose tags to check.`,
     errors: parsed.errors,
   };
 };

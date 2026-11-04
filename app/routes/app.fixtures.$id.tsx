@@ -58,7 +58,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     cadenceFor: fx.cadenceFor,
     prefs,
   });
-  const proposals = await listProposals(fx.id);
+  const proposals = await listProposals({ kind: "fixture_swap", fixtureId: fx.id });
   return {
     fixture: fx.fixture,
     slot,

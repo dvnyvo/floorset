@@ -19,6 +19,7 @@ export default function App() {
     <AppProvider apiKey={apiKey}>
       <s-app-nav>
         <s-link href="/app">Read rate</s-link>
+        <s-link href="/app/ghosts">Loose tags</s-link>
         <s-link href="/app/replenish">Replenishment</s-link>
         <s-link href="/app/scans">Scans</s-link>
       </s-app-nav>
