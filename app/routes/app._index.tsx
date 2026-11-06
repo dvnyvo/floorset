@@ -2,12 +2,15 @@ import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
+import { saveReadRate } from "../lib/summaries.server";
 import { loadDashboard } from "../lib/floor.server";
 import { READ_RATE_TARGET, type RateRow } from "../lib/scans/reconcile";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  return loadDashboard(admin);
+  const d = await loadDashboard(admin);
+  await saveReadRate(d);
+  return d;
 };
 
 const pct = (r: number | null) => (r === null ? "—" : `${(r * 100).toFixed(1)}%`);

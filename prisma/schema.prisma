@@ -146,3 +146,11 @@ model SalesDaily {
 
   @@id([variantId, date])
 }
+
+// Small precomputed answers for Sidekick tools, which must respond within 1 second
+// (too short for a live catalog read). Refreshed whenever the matching page loads.
+model Summary {
+  key       String   @id // read_rate | swap_outs | loose_tags
+  data      Json
+  updatedAt DateTime @updatedAt
+}

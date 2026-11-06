@@ -4,13 +4,16 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
+import { saveLooseTags } from "../lib/summaries.server";
 import { loadGhosts, resolveSuspect, runDetection, type Resolution } from "../lib/ghosts.server";
 import { approveAndApply, ProposalError, rejectProposal, undoProposal } from "../lib/proposals.server";
 import { SIGNALS, type Signal } from "../lib/scans/ghosts";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  return loadGhosts(admin);
+  const g = await loadGhosts(admin);
+  await saveLooseTags(g);
+  return g;
 };
 
 const RESOLUTIONS: Resolution[] = ["loose_tag", "item_found", "not_found"];
