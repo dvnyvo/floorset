@@ -50,6 +50,9 @@ description = "Where the style sits on the sales floor, written by approved fixt
   [product.metafields.app.placement.access]
   admin = "merchant_read"
 
+[sidekick]
+extensions_summary = "Check RFID read rate and shrink, find floor items that need replacing, and list suspected loose tags"
+
 [webhooks]
 api_version = "2027-01"
 

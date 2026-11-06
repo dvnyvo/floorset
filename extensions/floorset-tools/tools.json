@@ -1,0 +1,38 @@
+[
+  {
+    "$schema": "https://extensions.shopifycdn.com/shopifycloud/schemas/v1/tool.json",
+    "name": "get_read_rate",
+    "description": "RFID read rate from the latest full store count: raw and adjusted (excluding suspected loose tags) against the 95% target, by category, plus SKUs that come up short count after count (a sign of shrink).",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filter": { "type": "string", "description": "Optional category to narrow to, e.g. bra or legging" }
+      }
+    },
+    "outputSchema": { "type": "object" }
+  },
+  {
+    "$schema": "https://extensions.shopifycdn.com/shopifycloud/schemas/v1/tool.json",
+    "name": "list_swap_outs",
+    "description": "Floor items that can no longer hold their size run on their fixture and need a replacement, from this morning's floor scan. Each has a link to the Floorset page that ranks replacements and stages the swap for approval.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filter": { "type": "string", "description": "Optional fixture or zone name, e.g. Zone 1 or Men's Table 1" }
+      }
+    },
+    "outputSchema": { "type": "object" }
+  },
+  {
+    "$schema": "https://extensions.shopifycdn.com/shopifycloud/schemas/v1/tool.json",
+    "name": "list_loose_tags",
+    "description": "Suspected loose RFID tags (tags still reading after the garment is gone, which hides shrink): counts, hotspot areas, and the most suspicious tags with confidence and the signals behind it.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "filter": { "type": "string", "description": "Optional store area, e.g. Fitting Room" }
+      }
+    },
+    "outputSchema": { "type": "object" }
+  }
+]
