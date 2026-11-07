@@ -21,3 +21,6 @@ Real timestamps (local time) of each step, newest last.
 | 2026-11-03 21:20 | Loose tags page: hotspots, sweep list by area, resolve flow (tag only / garment here / nothing there), and Shopify inventory corrections through the proposal flow (inventoryAdjustQuantities with changeFromQuantity and an idempotency key, undoable). Detection re-runs on every scan upload. Phase 5 complete. |
 | 2026-11-05 20:50 | Cached Sidekick summaries (read rate, swap-outs with deep links, loose tags) saved as pages load, served by an authenticated, CORS-enabled API route; measured under 1 ms per read and under 800 tokens per answer. |
 | 2026-11-05 21:45 | Sidekick app data extension with three read-only tools (get_read_rate, list_swap_outs, list_loose_tags) and the [sidekick] summary. Skipped the action extension: Shopify's intent types are a fixed list with no fit for a fixture swap, so swap-outs link to the fixture page instead. Phase 6 complete. |
+
+## 2026-11-07 13:25 — README and CI
+Full README (problem, demo script, architecture diagram, design decisions, results on synthetic data, scale notes, setup). GitHub Actions workflow runs lint, typecheck and tests. Removed the template changelog.
