@@ -24,3 +24,6 @@ Real timestamps (local time) of each step, newest last.
 
 ## 2026-11-07 13:25 — README and CI
 Full README (problem, demo script, architecture diagram, design decisions, results on synthetic data, scale notes, setup). GitHub Actions workflow runs lint, typecheck and tests. Removed the template changelog.
+
+## 2026-11-08 16:10 — Fix Sidekick extension API version
+The generated extension pinned 2025-10, which Admin app tools data no longer accepts. Moved to 2026-10.
