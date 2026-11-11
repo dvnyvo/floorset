@@ -27,7 +27,7 @@ export default function Replenish() {
         <s-section>
           <s-empty-state heading="No floor scan yet">
             <s-paragraph>Upload this morning&apos;s floor scan to get the fill list.</s-paragraph>
-            <s-button slot="primary-action" href="/app/scans">Upload a scan</s-button>
+            <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
           </s-empty-state>
         </s-section>
       </s-page>

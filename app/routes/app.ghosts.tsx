@@ -101,7 +101,7 @@ export default function Ghosts() {
 
   return (
     <s-page heading="Loose tags">
-      <s-button slot="primary-action" disabled={busy} onClick={() => post({ intent: "detect" })}>
+      <s-button slot="primary-action" variant="primary" disabled={busy} onClick={() => post({ intent: "detect" })}>
         Re-run detection
       </s-button>
 

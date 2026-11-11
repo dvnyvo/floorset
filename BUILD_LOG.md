@@ -27,3 +27,6 @@ Full README (problem, demo script, architecture diagram, design decisions, resul
 
 ## 2026-11-08 16:10 — Fix Sidekick extension API version
 The generated extension pinned 2025-10, which Admin app tools data no longer accepts. Moved to 2026-10.
+
+## 2026-11-10 19:45 — Browser pass through the admin
+Clicked through every page in the Shopify admin, including swap and correction approve/undo and a Sidekick question. Fixed the page-header buttons, which Polaris only accepts as primary.

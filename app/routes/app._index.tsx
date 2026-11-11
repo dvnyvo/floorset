@@ -28,7 +28,7 @@ export default function Dashboard() {
         <s-section>
           <s-empty-state heading="No full count yet">
             <s-paragraph>Upload a weekly full-count scan to compare tag reads against Shopify on-hand.</s-paragraph>
-            <s-button slot="primary-action" href="/app/scans">Upload a scan</s-button>
+            <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
           </s-empty-state>
         </s-section>
       </s-page>
@@ -38,7 +38,7 @@ export default function Dashboard() {
   const gap = (d.total.rawRate ?? 0) - (d.total.adjustedRate ?? 0);
   return (
     <s-page heading="Read rate">
-      <s-button slot="primary-action" href="/app/scans">Upload a scan</s-button>
+      <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
 
       <s-section heading={`Full count · ${d.scan.takenAt.slice(0, 10)}`}>
         <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
