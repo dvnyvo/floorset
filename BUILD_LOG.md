@@ -30,3 +30,12 @@ The generated extension pinned 2025-10, which Admin app tools data no longer acc
 
 ## 2026-11-10 19:45 — Browser pass through the admin
 Clicked through every page in the Shopify admin, including swap and correction approve/undo and a Sidekick question. Fixed the page-header buttons, which Polaris only accepts as primary.
+
+## 2026-11-12 20:00 — More scan history and a messy test file
+The generator now writes 8 weekly full counts (bra theft builds up week by week) and a deliberately bad reader export. Tests parse every generated file.
+
+## 2026-11-12 21:05 — Read-rate snapshots and trend chart
+Each full count freezes its read rate per category on upload. The dashboard charts the rate over time (all items against the weakest category, with the target line) and Sidekick gets the trend.
+
+## 2026-11-12 22:00 — Webhooks and catalog cache
+The catalog is cached and dropped by inventory and product webhooks and by the app's own writes. New orders add to the daily sales rollup, each delivery counted once. README updated.

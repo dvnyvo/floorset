@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { chronicShorts, readRates, type UnitInfo, type VariantStock } from "../../app/lib/scans/reconcile";
+import { salesFromOrder } from "../../app/lib/sales";
+import { parseScanCsv } from "../../app/lib/scans/parse";
+import { generateScans } from "../../scripts/gen-scans";
+import { chronicShorts, readRates, trendPoints, type UnitInfo, type VariantStock } from "../../app/lib/scans/reconcile";
 
 const variants: VariantStock[] = [
   { variantId: "v1", sku: "A-S", productTitle: "Legging A", size: "S", category: "legging", onHand: 10 },
@@ -41,5 +44,61 @@ describe("chronicShorts", () => {
   });
   it("needs at least two counts", () => {
     expect(chronicShorts([rows(["v1"])])).toEqual([]);
+  });
+});
+
+describe("trendPoints", () => {
+  it("builds one point per full count, oldest first, with totals and per-category rates", () => {
+    const row = (d: string, category: string, expected: number, raw: number, adjusted: number) => ({ takenAt: new Date(d), category, expected, raw, adjusted });
+    const points = trendPoints([
+      row("2026-11-08T08:00:00Z", "bra", 100, 94, 93),
+      row("2026-11-01T08:00:00Z", "bra", 100, 97, 97),
+      row("2026-11-01T08:00:00Z", "top", 300, 297, 297),
+      row("2026-11-08T08:00:00Z", "top", 0, 0, 0),
+    ]);
+    expect(points.map((p) => p.date)).toEqual(["2026-11-01", "2026-11-08"]);
+    expect(points[0].adjustedRate).toBeCloseTo(394 / 400);
+    expect(points[1]).toMatchObject({ rawRate: 0.94, adjustedRate: 0.93, byCategory: { bra: 0.93, top: null } });
+  });
+});
+
+describe("salesFromOrder", () => {
+  it("sums units per variant on the order's UTC day and skips lines it can't trust", () => {
+    const sales = salesFromOrder({
+      created_at: "2026-11-16T23:30:00-05:00",
+      line_items: [
+        { variant_id: 11, quantity: 2 },
+        { variant_id: 11, quantity: 1 },
+        { variant_id: null, quantity: 1 }, // custom item
+        { variant_id: 12, quantity: -3 },
+        { variant_id: 13, quantity: 1.5 },
+      ],
+    });
+    expect(sales).toEqual([{ variantId: "gid://shopify/ProductVariant/11", date: new Date("2026-11-16T00:00:00Z"), units: 3 }]);
+  });
+
+  it("returns nothing for a payload with no usable date", () => {
+    expect(salesFromOrder({ line_items: [{ variant_id: 1, quantity: 1 }] })).toEqual([]);
+  });
+});
+
+describe("generated scan data", () => {
+  const { files, messy } = generateScans();
+
+  it("parses every generated scan cleanly", () => {
+    for (const f of files) {
+      const r = parseScanCsv(f.csv, new Date(`${f.date}T08:00:00Z`));
+      expect(r.errors, f.name).toEqual([]);
+      expect(r.duplicates, f.name).toBe(0);
+    }
+  });
+
+  it("recovers the good rows from a messy reader export and reports the rest", () => {
+    const r = parseScanCsv(messy.csv, new Date("2026-11-16T08:00:00Z"));
+    expect(r.reads).toHaveLength(messy.expect.reads);
+    expect(r.duplicates).toBe(messy.expect.duplicates);
+    expect(r.errors).toHaveLength(messy.expect.badRows);
+    expect(r.reads.filter((x) => x.epc.startsWith("E2801170"))).toHaveLength(messy.expect.unknown);
+    expect(r.reads.every((x) => x.area && !Number.isNaN(x.readAt.getTime()))).toBe(true);
   });
 });

@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import db from "../db.server";
-import { gql, primaryLocationId, type AdminClient } from "./shopify/catalog.server";
+import { gql, invalidateCatalog, primaryLocationId, type AdminClient } from "./shopify/catalog.server";
 
 export interface SwapPayload {
   fixtureId: string;
@@ -61,6 +61,7 @@ export async function approveAndApply(admin: AdminClient, id: string) {
   const p = await db.proposal.findUniqueOrThrow({ where: { id } });
   try {
     const { before, after, ops } = await handler(p.kind).apply(admin, p);
+    invalidateCatalog(); // Shopify just changed; no need to wait for the webhook
     // shortcut: Shopify write then local transaction; a crash between them leaves Shopify ahead (re-apply heals it).
     await db.$transaction([
       ...ops,
@@ -79,6 +80,7 @@ export async function undoProposal(admin: AdminClient, id: string) {
   const log = p?.auditLogs[0];
   if (p?.status !== "applied" || !log) throw new ProposalError("Only applied changes can be undone");
   const ops = await handler(p.kind).undo(admin, p, log.before as Snapshot, log.after as Snapshot);
+  invalidateCatalog();
   await db.$transaction([
     ...ops,
     db.proposal.update({ where: { id }, data: { status: "undone" } }),

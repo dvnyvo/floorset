@@ -85,8 +85,26 @@ type ProductNode = {
 };
 
 /** Every variant of every product Floorset knows (has a category metafield), with quantities. */
-// shortcut: re-fetches the catalog per page load (~6 calls); cache or sync via webhooks at scale.
-export async function fetchCatalog(admin: AdminClient): Promise<{ locationId: string; variants: CatalogVariant[] }> {
+// Cached, because a full read is ~6 Admin API calls. Product and inventory webhooks drop the cache,
+// as do Floorset's own writes; the time limit only covers a missed webhook.
+// shortcut: in-memory and single-store; use a shared cache keyed by shop if the app runs on several instances.
+type Catalog = { locationId: string; variants: CatalogVariant[] };
+const CACHE_MS = 5 * 60_000;
+let cached: { at: number; data: Promise<Catalog> } | null = null;
+
+export function invalidateCatalog() {
+  cached = null;
+}
+
+export function fetchCatalog(admin: AdminClient): Promise<Catalog> {
+  if (cached && Date.now() - cached.at < CACHE_MS) return cached.data;
+  const data = readCatalog(admin);
+  cached = { at: Date.now(), data };
+  data.catch(() => cached?.data === data && invalidateCatalog()); // never cache a failed read
+  return data;
+}
+
+async function readCatalog(admin: AdminClient): Promise<Catalog> {
   const locationId = await primaryLocationId(admin);
   const variants: CatalogVariant[] = [];
   let cursor: string | null = null;
