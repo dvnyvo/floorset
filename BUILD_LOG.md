@@ -39,3 +39,6 @@ Each full count freezes its read rate per category on upload. The dashboard char
 
 ## 2026-11-12 22:00 — Webhooks and catalog cache
 The catalog is cached and dropped by inventory and product webhooks and by the app's own writes. New orders add to the daily sales rollup, each delivery counted once. README updated.
+
+## 2026-11-13 18:30 — Order webhook off by default
+Shopify refused the orders/create subscription: order webhooks need protected customer data access. The handler stays, the subscription and read_orders scope are commented out, and the README says so.

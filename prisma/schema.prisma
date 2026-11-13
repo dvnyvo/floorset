@@ -159,7 +159,7 @@ model AuditLog {
   undoneAt   DateTime?
 }
 
-// Units sold per variant per day, for sales velocity. Seeded, then kept current by the orders/create webhook.
+// Units sold per variant per day, for sales velocity. Seeded; the orders/create webhook handler adds to it.
 model SalesDaily {
   variantId String
   date      DateTime

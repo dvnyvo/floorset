@@ -7,7 +7,7 @@ name = "floorset"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,write_inventory,read_locations,read_orders"
+scopes = "write_products,write_inventory,read_locations"
 
 # Floorset product attributes the rules engine reads (app-owned namespace: $app)
 [product.metafields.app.color_family]
@@ -64,14 +64,17 @@ api_version = "2027-01"
   uri = "/webhooks/app/scopes_update"
   topics = [ "app/scopes_update" ]
 
-  # Stock or product changes drop the cached catalog; new orders feed sales velocity.
+  # Stock or product changes drop the cached catalog.
   [[webhooks.subscriptions]]
   uri = "/webhooks/catalog"
   topics = [ "inventory_levels/update", "products/update", "products/delete" ]
 
-  [[webhooks.subscriptions]]
-  uri = "/webhooks/orders/create"
-  topics = [ "orders/create" ]
+  # New orders feed sales velocity. Off by default: Shopify only delivers order webhooks to apps with
+  # protected customer data access. Once that is granted in the Partner Dashboard, add read_orders to
+  # the scopes above and uncomment this block.
+  # [[webhooks.subscriptions]]
+  # uri = "/webhooks/orders/create"
+  # topics = [ "orders/create" ]
 
 [auth]
 redirect_urls = [ "https://example.com/api/auth" ]
