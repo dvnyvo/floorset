@@ -7,6 +7,7 @@ import { authenticate } from "../shopify.server";
 import db from "../db.server";
 import { parseScanCsv } from "../lib/scans/parse";
 import { runDetection } from "../lib/ghosts.server";
+import { snapshotCounts } from "../lib/floor.server";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = { full_count: "Weekly full count", floor: "Morning floor scan" } as const;
@@ -22,7 +23,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 type ActionResult = { ok: boolean; message?: string; errors?: string[] };
 
 export const action = async ({ request }: ActionFunctionArgs): Promise<ActionResult> => {
-  await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
   const form = await request.formData();
 
   if (form.get("intent") === "delete") {
@@ -44,6 +45,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<ActionRes
 
   await db.scan.create({ data: { type, takenAt, tagReads: { createMany: { data: parsed.reads } } } });
   const { open } = await runDetection();
+  if (type === "full_count") await snapshotCounts(admin);
   const skipped = parsed.errors.length ? `, skipped ${parsed.errors.length}${parsed.errors.length === 20 ? "+" : ""} bad rows` : "";
   return {
     ok: true,

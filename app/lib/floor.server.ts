@@ -11,7 +11,7 @@ import {
   type SizeCounts,
   type SlotItem,
 } from "./engine/types";
-import { chronicShorts, readRates, type RateRow, type UnitInfo } from "./scans/reconcile";
+import { chronicShorts, readRates, trendPoints, type RateRow, type UnitInfo } from "./scans/reconcile";
 import { fetchCatalog, type AdminClient, type CatalogVariant } from "./shopify/catalog.server";
 
 export async function unitsByEpc() {
@@ -28,6 +28,30 @@ export async function ghostEpcs() {
   return new Set(rows.map((r) => r.epc));
 }
 
+/** Freezes the read rate of every full count that has no snapshot yet. Runs on upload, and on the dashboard as a backfill. */
+// shortcut: a count snapshotted late (backfill) uses today's on-hand and loose-tag list; counts snapshotted on upload are exact.
+export async function snapshotCounts(admin: AdminClient) {
+  const counts = await db.scan.findMany({
+    where: { type: "full_count", snapshots: { none: {} } },
+    include: { tagReads: { select: { epc: true } } },
+  });
+  if (!counts.length) return;
+  const [{ variants }, units, ghosts] = await Promise.all([fetchCatalog(admin), unitsByEpc(), ghostEpcs()]);
+  for (const c of counts) {
+    const { byCategory } = readRates({ variants, units, readEpcs: c.tagReads.map((t) => t.epc), ghostEpcs: ghosts });
+    const data = byCategory.map((r) => ({ scanId: c.id, category: r.key, expected: r.expected, raw: r.raw, adjusted: r.adjusted }));
+    // Two requests can race to snapshot the same count; the rows of the one that lost already exist.
+    await db.readRateSnapshot.createMany({ data }).catch((e) => {
+      if (e?.code !== "P2002") throw e;
+    });
+  }
+}
+
+export async function loadTrend() {
+  const rows = await db.readRateSnapshot.findMany({ include: { scan: { select: { takenAt: true } } } });
+  return trendPoints(rows.map((r) => ({ ...r, takenAt: r.scan.takenAt })));
+}
+
 export async function loadDashboard(admin: AdminClient) {
   const counts = await db.scan.findMany({
     where: { type: "full_count" },
@@ -36,9 +60,10 @@ export async function loadDashboard(admin: AdminClient) {
     include: { tagReads: { select: { epc: true } } },
   });
   if (!counts.length) return { scan: null };
+  await snapshotCounts(admin);
 
   const [{ variants }, units, ghosts] = await Promise.all([fetchCatalog(admin), unitsByEpc(), ghostEpcs()]);
-  // shortcut: older counts are compared to today's on-hand; store on-hand snapshots per count for exact history.
+  // shortcut: the per-SKU "short week after week" check compares older counts to today's on-hand; snapshots are per category only.
   const perCount = counts.map((c) =>
     readRates({ variants, units, readEpcs: c.tagReads.map((t) => t.epc), ghostEpcs: ghosts }),
   );
@@ -57,6 +82,7 @@ export async function loadDashboard(admin: AdminClient) {
     chronic: chronicShorts(perCount.map((p) => p.bySku)).map((k) => label.get(k)!),
     unknownEpcs: latest.unknownEpcs,
     ghostCount: ghosts.size,
+    trend: await loadTrend(),
   };
 }
 

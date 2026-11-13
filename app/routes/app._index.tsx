@@ -5,6 +5,7 @@ import { authenticate } from "../shopify.server";
 import { saveReadRate } from "../lib/summaries.server";
 import { loadDashboard } from "../lib/floor.server";
 import { READ_RATE_TARGET, type RateRow } from "../lib/scans/reconcile";
+import { ReadRateChart } from "../components/ReadRateChart";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -48,6 +49,42 @@ export default function Dashboard() {
           <Stat label="Unknown tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
         </s-grid>
       </s-section>
+
+      {d.trend.length > 1 && (
+        <s-section heading="Read rate over time">
+          <s-stack direction="block" gap="base">
+            <s-paragraph>Adjusted read rate at each full count, measured against on-hand at the time.</s-paragraph>
+            <ReadRateChart points={d.trend} target={READ_RATE_TARGET} />
+            <details>
+              <summary>Show as a table</summary>
+              <s-table>
+                <s-table-header-row>
+                  <s-table-header listSlot="primary">Full count</s-table-header>
+                  <s-table-header format="numeric">Raw</s-table-header>
+                  <s-table-header format="numeric">Adjusted</s-table-header>
+                  {d.byCategory.map((c) => (
+                    <s-table-header key={c.key} format="numeric">
+                      {c.label}
+                    </s-table-header>
+                  ))}
+                </s-table-header-row>
+                <s-table-body>
+                  {d.trend.map((p) => (
+                    <s-table-row key={p.date}>
+                      <s-table-cell>{p.date}</s-table-cell>
+                      <s-table-cell>{pct(p.rawRate)}</s-table-cell>
+                      <s-table-cell>{pct(p.adjustedRate)}</s-table-cell>
+                      {d.byCategory.map((c) => (
+                        <s-table-cell key={c.key}>{pct(p.byCategory[c.key] ?? null)}</s-table-cell>
+                      ))}
+                    </s-table-row>
+                  ))}
+                </s-table-body>
+              </s-table>
+            </details>
+          </s-stack>
+        </s-section>
+      )}
 
       <s-section heading="By category">
         <s-table>

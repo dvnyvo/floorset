@@ -69,6 +69,40 @@ export function readRates(input: {
   return { total: row("total", "All", t.e, t.r, t.a), byCategory, bySku, unknownEpcs: unknown };
 }
 
+export interface SnapshotRow {
+  takenAt: Date;
+  category: string;
+  expected: number;
+  raw: number;
+  adjusted: number;
+}
+export interface TrendPoint {
+  date: string; // YYYY-MM-DD
+  rawRate: number | null;
+  adjustedRate: number | null;
+  byCategory: Record<string, number | null>; // adjusted rate per category
+}
+
+/** One point per full count, oldest first, from the per-category snapshot rows. */
+export function trendPoints(rows: SnapshotRow[]): TrendPoint[] {
+  const byDate = new Map<string, SnapshotRow[]>();
+  for (const r of rows) {
+    const d = r.takenAt.toISOString().slice(0, 10);
+    byDate.set(d, [...(byDate.get(d) ?? []), r]);
+  }
+  return [...byDate]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, rs]) => {
+      const sum = (k: "expected" | "raw" | "adjusted") => rs.reduce((n, r) => n + r[k], 0);
+      return {
+        date,
+        rawRate: rate(sum("raw"), sum("expected")),
+        adjustedRate: rate(sum("adjusted"), sum("expected")),
+        byCategory: Object.fromEntries(rs.map((r) => [r.category, rate(r.adjusted, r.expected)])),
+      };
+    });
+}
+
 /** Variants read short (fewer tags than on-hand) in every one of the given counts. */
 export function chronicShorts(perCount: RateRow[][], minCounts = 2): string[] {
   if (perCount.length < minCounts) return [];

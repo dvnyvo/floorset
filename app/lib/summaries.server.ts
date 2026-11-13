@@ -35,6 +35,7 @@ export function saveReadRate(d: Awaited<ReturnType<typeof loadDashboard>>) {
     })),
     skusBelowTarget: d.flaggedSkuCount,
     chronicShortSkus: d.chronic?.slice(0, 15).map((r) => r.label),
+    trend: d.trend?.slice(-12).map((p) => ({ date: p.date, adjustedPct: pct(p.adjustedRate) })),
   });
 }
 

@@ -91,6 +91,27 @@ model Scan {
   type     String // full_count | floor
   takenAt  DateTime
   tagReads TagRead[]
+  snapshots ReadRateSnapshot[]
+}
+
+// Read rate per category, frozen when a full count comes in (against on-hand as it was then),
+// so the trend never has to re-read old scans or guess past inventory.
+model ReadRateSnapshot {
+  scanId   String
+  scan     Scan   @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  category String
+  expected Int // Shopify on-hand at the time
+  raw      Int // tags read
+  adjusted Int // tags read, excluding suspected loose tags
+
+  @@id([scanId, category])
+}
+
+// Webhook deliveries already handled. Shopify can deliver the same event more than once.
+model WebhookEvent {
+  id         String   @id // X-Shopify-Webhook-Id
+  topic      String
+  receivedAt DateTime @default(now())
 }
 
 // Raw reads, append-only.
@@ -138,7 +159,7 @@ model AuditLog {
   undoneAt   DateTime?
 }
 
-// Rolled up from orders for sales velocity.
+// Units sold per variant per day, for sales velocity. Seeded, then kept current by the orders/create webhook.
 model SalesDaily {
   variantId String
   date      DateTime
