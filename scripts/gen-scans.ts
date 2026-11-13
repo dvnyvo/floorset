@@ -1,6 +1,7 @@
 // Generates synthetic RFID scan CSVs (epc,area,read_at) from the seed data:
-// 3 weekly full counts and 4 morning floor scans, with planted shrink and loose tags.
-// Usage: npm run gen-scans   -> writes scans/*.csv and scans/truth.json
+// 8 weekly full counts and 4 morning floor scans, with planted shrink and loose tags,
+// plus one deliberately messy reader export for exercising the parser.
+// Usage: npm run gen-scans   -> writes scans/*.csv, scans/messy/reader_export.csv and scans/truth.json
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { generate, rng, type SeedUnit } from "./seed-data.ts";
@@ -9,6 +10,8 @@ export const FITTING_ROOM = "Fitting Room";
 export const ENTRANCE_CORNER = "Entrance Corner";
 export const STOCKROOM = "Stockroom";
 
+// Earlier history: bra theft builds up week by week, before any loose tags appear.
+const EARLIER_COUNTS = ["2026-09-27", "2026-10-04", "2026-10-11", "2026-10-18", "2026-10-25"];
 const FULL_COUNTS = ["2026-11-01", "2026-11-08", "2026-11-15"];
 const FLOOR_SCANS = ["2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"];
 const READ_RATE = 0.985; // chance a present, tagged unit is read
@@ -92,14 +95,53 @@ export function generateScans(seed = 7) {
     files.push({ name: `${scan.date}_${scan.type}.csv`, type: scan.type, date: scan.date, csv: rows.join("\n") + "\n" });
   });
 
-  return { files, truth: { stolenSilent: [...stolenSilent], ghosts } };
+  // Earlier counts use their own random stream so the scans above stay byte-for-byte stable.
+  const r2 = rng(seed + 1000);
+  const stolenOrder = [...stolenSilent];
+  const earlier = EARLIER_COUNTS.map((date, k) => {
+    const gone = new Set(stolenOrder.slice(0, Math.ceil((stolenOrder.length * (k + 1)) / (EARLIER_COUNTS.length + 1))));
+    const t0 = new Date(`${date}T07:00:00Z`).getTime();
+    const rows = ["epc,area,read_at"];
+    for (const u of inStock) {
+      if (!gone.has(u.epc) && r2() < READ_RATE) rows.push(`${u.epc},${homeArea(u)},${new Date(t0 + rows.length * 150).toISOString()}`);
+    }
+    return { name: `${date}_full_count.csv`, type: "full_count" as const, date, csv: rows.join("\n") + "\n" };
+  });
+  files.unshift(...earlier);
+
+  return { files, truth: { stolenSilent: [...stolenSilent], ghosts }, messy: messyExport(files[files.length - 1].csv) };
+}
+
+/** A reader export with everything that goes wrong in real files, and the counts a parser should report. */
+function messyExport(cleanCsv: string) {
+  const rows = cleanCsv.trim().split("\n").slice(1).map((l) => l.split(","));
+  const good = rows.slice(0, 300);
+  const out = [" read_at , EPC ,Area,rssi"]; // reordered columns, stray spaces and capitals, an extra column
+  const line = (epc: string, area: string, at: string, i: number) => out.push(`${at}, ${epc} ,${area},-${50 + (i % 30)}`);
+  good.forEach(([epc, area, at], i) => {
+    line(epc, area, at, i);
+    if (i % 8 === 0) line(epc.toLowerCase(), area, at, i); // the wand read it twice
+    if (i % 50 === 0) out.push(""); // blank lines
+  });
+  const badEpcs = ["30340000ZZ", "", "303400000000000000000", "NOT-A-TAG"];
+  badEpcs.forEach((e, i) => line(e, "Zone 1", good[0][2], i));
+  const badTimes = ["yesterday", "32/13/2026", "--"];
+  badTimes.forEach((t, i) => line(rows[300 + i][0], "Zone 1", t, i));
+  const unknown = 12; // valid tags that aren't in the unit list (another retailer's, or untagged-in-system stock)
+  for (let i = 0; i < unknown; i++) line(`E2801170${i.toString(16).toUpperCase().padStart(16, "0")}`, "Zone 2", good[0][2], i);
+  return {
+    csv: out.join("\r\n") + "\r\n",
+    expect: { reads: good.length + unknown, duplicates: Math.ceil(good.length / 8), badRows: badEpcs.length + badTimes.length, unknown },
+  };
 }
 
 if (import.meta.main) {
-  const { files, truth } = generateScans();
-  mkdirSync("scans", { recursive: true });
+  const { files, truth, messy } = generateScans();
+  mkdirSync("scans/messy", { recursive: true });
+  writeFileSync("scans/messy/reader_export.csv", messy.csv);
   for (const f of files) writeFileSync(`scans/${f.name}`, f.csv);
   writeFileSync("scans/truth.json", JSON.stringify(truth, null, 2));
   for (const f of files) console.log(`scans/${f.name}: ${f.csv.split("\n").length - 2} reads`);
+  console.log(`scans/messy/reader_export.csv: expect ${JSON.stringify(messy.expect)}`);
   console.log(`planted: ${truth.stolenSilent.length} silent thefts, ${truth.ghosts.length} loose tags`);
 }
