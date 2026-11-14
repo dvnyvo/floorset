@@ -45,3 +45,6 @@ Shopify refused the orders/create subscription: order webhooks need protected cu
 
 ## 2026-11-14 12:20 — Order webhook on
 Enabled the `orders/create` webhook. Protected customer data access was selected for the app in the Partner Dashboard (development stores need no review), so Shopify now accepts the subscription and the `read_orders` scope. README and seed comment updated to match.
+
+## 2026-11-14 12:45 — Order webhook verified
+Placed test order #1001 (1 x Alder Tee, Bone, XS) in the dev store. The `orders/create` delivery was recorded once and added 1 unit to that variant's daily sales for 2026-11-14.
