@@ -193,7 +193,7 @@ async function main() {
     await db.unit.createMany({
       data: data.units.map((u) => ({ epc: u.epc, variantId: variant.get(u.sku)!.id, area: u.area, status: u.status })),
     });
-    // Sales history is a synthetic rollup, not real orders (dev stores rate-limit order creation). The orders/create webhook handler adds new orders once its subscription is enabled.
+    // Sales history is a synthetic rollup, not real orders (dev stores rate-limit order creation). New orders are added by the orders/create webhook.
     await db.salesDaily.createMany({
       data: data.sales.map((s) => ({ variantId: variant.get(s.sku)!.id, date: new Date(`${s.date}T00:00:00Z`), units: s.units })),
     });

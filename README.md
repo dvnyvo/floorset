@@ -42,7 +42,7 @@ flowchart LR
   end
   subgraph Shopify
     A[Admin GraphQL API<br/>products, variants,<br/>inventory, $app metafields]
-    WH[Webhooks<br/>inventory, products]
+    WH[Webhooks<br/>inventory, products, orders]
     SK[Sidekick]
   end
   subgraph Floorset app
@@ -66,7 +66,7 @@ flowchart LR
   P -- CAS writes --> A
   P --> DB
   SK --> X --> API --> DB
-  WH -- drop catalog cache --> UI
+  WH -- drop catalog cache,<br/>add to daily sales --> DB
 ```
 
 Shopify stays the source of truth for products and counts. The app database holds what Shopify doesn't model: the floor layout, size cadences, one row per RFID tag, raw scan reads, read-rate snapshots, daily sales, loose-tag suspects, proposals, and the audit log.
@@ -79,7 +79,7 @@ Shopify stays the source of truth for products and counts. The app database hold
 - **Loose-tag signals that hold up under re-merchandising.** Detection first flagged tags read outside their own zone. That produced false alarms after a real swap moved stock between zones, so "wrong area" now means outside every sales zone and the stockroom. Signals combine as 1 − Π(1 − weight).
 - **Sidekick answers from cached summaries.** Sidekick data tools must respond within 1 second, too short for a live catalog read. Pages save a trimmed summary as they load (under 800 tokens each) and the tools read it back with an `asOf` time.
 - **A cached catalog that webhooks keep honest.** A full catalog read is about 6 Admin API calls, so it is cached in memory. `inventory_levels/update`, `products/update` and `products/delete` webhooks drop the cache, and so do the app's own writes, so a page never shows a count the app itself just changed. A 5-minute limit covers a missed webhook.
-- **Sales from order webhooks, counted once.** The `orders/create` handler adds each line to a per-variant daily rollup that feeds sales velocity. Shopify can deliver a webhook more than once, so the delivery ID and the rollup update are written in one transaction; a repeat delivery fails the unique check and changes nothing. The subscription is commented out in `shopify.app.toml`, because Shopify only delivers order webhooks to apps granted protected customer data access; until then, sales velocity uses the seeded rollup.
+- **Sales from order webhooks, counted once.** The `orders/create` handler adds each line to a per-variant daily rollup that feeds sales velocity. Shopify can deliver a webhook more than once, so the delivery ID and the rollup update are written in one transaction; a repeat delivery fails the unique check and changes nothing. Shopify only delivers order webhooks to apps with protected customer data access, which is selected for the app in the Partner Dashboard (no review needed for development stores). The handler reads line items only and stores no customer fields.
 - **Read-rate history as snapshots.** When a full count is uploaded, the rate per category is frozen against on-hand at that moment. The trend chart reads those few rows and never re-reads old scans or guesses past inventory.
 - **No action extension.** Sidekick action intents are a fixed list of types, none of which fits "fixture swap". Rather than mislabel it, the swap-out tool returns a link to the fixture view, where the swap is staged and approved.
 

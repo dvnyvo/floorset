@@ -42,3 +42,6 @@ The catalog is cached and dropped by inventory and product webhooks and by the a
 
 ## 2026-11-13 18:30 — Order webhook off by default
 Shopify refused the orders/create subscription: order webhooks need protected customer data access. The handler stays, the subscription and read_orders scope are commented out, and the README says so.
+
+## 2026-11-14 12:20 — Order webhook on
+Enabled the `orders/create` webhook. Protected customer data access was selected for the app in the Partner Dashboard (development stores need no review), so Shopify now accepts the subscription and the `read_orders` scope. README and seed comment updated to match.
