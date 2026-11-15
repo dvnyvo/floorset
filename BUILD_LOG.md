@@ -48,3 +48,6 @@ Enabled the `orders/create` webhook. Protected customer data access was selected
 
 ## 2026-11-14 12:45 — Order webhook verified
 Placed test order #1001 (1 x Alder Tee, Bone, XS) in the dev store. The `orders/create` delivery was recorded once and added 1 unit to that variant's daily sales for 2026-11-14.
+
+## 2026-11-15 14:10 — Wider read-rate gap, README notes
+The scan generator now plants theft from back stock with the cut tags dumped in four off-floor spots (4% of units), and the reader hit rate is 96.5%. The latest count reads 96.1% raw against 92.3% adjusted; 235 of 257 planted loose tags are flagged with no false alarms, and replenishment still finds 7 swap-outs. Scans were reloaded oldest first so every snapshot is exact. README: new numbers, notes on Admin API rate limits and webhook backfills, and a Future work section. Test order #1001 was cancelled with restock.

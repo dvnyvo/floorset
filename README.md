@@ -27,8 +27,8 @@ An optional Claude copilot on the fixture view turns requests like "something br
 
 ## Demo (5 minutes)
 
-1. **Read rate.** The store reads 98%, which looks fine. Bras sit at 93%, and the chart shows them sliding from 97% over eight weekly counts while the store-wide line stays flat: steady theft that the headline number hides.
-2. **Loose tags.** 26 suspects, clustered in the fitting room and one entrance corner. Raw read rate is above adjusted because these tags are still counted. Mark one "Tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
+1. **Read rate.** The store reads 96.1%, above the 95% target. With suspected loose tags taken out it reads 92.3%: 3.8 points of shrink the headline number hides. The chart shows the adjusted rate holding near 96% for six counts and then falling as loose tags pile up, while bras slide from 95% to 88%.
+2. **Loose tags.** 235 suspects, almost all in four spots where no stock belongs: the fitting room, an entrance corner, the cash wrap and a back corridor. Mark one "Tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
 3. **Replenishment.** 7 items can't hold their size run. Click **Find replacement**.
 4. **Fixture view.** The before row shows the rail; the after row shows it with the top pick. Each pick says why in plain English (size run, back stock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap.
 5. **Sidekick.** Ask "Which floor items need replacing?" and follow the link back to the fixture view.
@@ -87,8 +87,9 @@ Shopify stays the source of truth for products and counts. The app database hold
 
 | Check | Result |
 | --- | --- |
-| Planted bra theft (5% of units, building up over six weeks) | Bras fall from 97% to 93% across eight counts, crossing the 95% target in week five; the store-wide rate stays near 98% |
-| Loose-tag detection | 26 flagged, 26 planted, 0 false alarms. The 22 planted tags dropped at their own fixture are not flagged: they look exactly like stock on the floor, which is the limit of scan-only detection |
+| Raw vs adjusted read rate (latest count, 6,214 units on hand) | 96.1% raw, 92.3% adjusted. The raw rate passes the 95% target; the adjusted rate fails it |
+| Planted bra theft (5% of units, tags gone, building up over six weeks) | Bras fall from 95% to 88% across eight counts |
+| Loose-tag detection | 257 planted, 235 flagged, 0 false alarms. The 22 planted tags dropped at their own fixture are not flagged: they look exactly like stock on the floor, which is the limit of scan-only detection |
 | Swap-outs | 7 found; 6 have valid replacements, 1 is blocked by the fixture's color and category mix |
 | Write path | Propose → apply → undo verified against a dev store for both metafield swaps and inventory corrections |
 
@@ -96,10 +97,18 @@ Shopify stays the source of truth for products and counts. The app database hold
 
 - **Multi-store and multi-location.** Add a `shop` column to every table and a location picker. Today it's single-store with the first location.
 - **Sync instead of cache.** The catalog cache is in memory and dropped whole on any change. At scale, sync the catalog into the database with bulk operations and apply webhooks row by row.
+- **Admin API rate limits.** The GraphQL Admin API charges each query a cost against a bucket that refills over time. The app makes a few calls per page and does not retry a throttled one. With many stores it would read the throttle status returned with each response, back off and retry on a throttled error, and move full catalog reads to bulk operations, which run outside that budget.
+- **Webhook backfills.** Shopify retries a failed delivery for a limited time and then drops it. The 5-minute cache limit covers a missed inventory webhook, but a missed order never reaches the sales rollup. A scheduled job would re-read orders changed since the last one processed and add any that are missing, using the same once-only check.
 - **Scans as a stream.** Reader uploads would go to object storage and a queue. Reads would land in a columnar store, and per-SKU rollups would be computed incrementally.
 - **Net sales.** The sales rollup counts units ordered. Refunds and cancellations would be subtracted via `refunds/create` and `orders/cancelled`.
 - **Summaries on a schedule.** Sidekick summaries refresh when a page loads; a scheduled job would keep them fresh.
 - **Postgres and hosting.** SQLite is fine for one store. Proposals and audit rows would move to Postgres with row-level locking, and the app would be deployed from the included Dockerfile. It currently runs only through `shopify app dev`.
+
+## Future work
+
+- **Signal weights that learn.** The loose-tag signal weights are fixed. The app records every false alarm ("item found") but does not yet use them; the next step is to lower a signal's weight as its false alarms add up.
+- **A Sidekick action.** Sidekick can read from Floorset but cannot stage a swap; it links to the fixture view instead.
+- **Deployment.** Not hosted anywhere yet.
 
 ## Running locally
 
@@ -124,4 +133,4 @@ npm run lint
 
 ## Synthetic data
 
-All products, colors, zones, cadences, stock, sales and scans are generated by a seeded generator in `scripts/`. The planted problems (bra theft that builds week by week, loose tags in the fitting room and an entrance corner, sold items whose tags still read, broken size runs) are recorded in `scans/truth.json` so detection can be scored. No real company data, figures or system names are used.
+All products, colors, zones, cadences, stock, sales and scans are generated by a seeded generator in `scripts/`. The planted problems (bra theft that builds week by week, loose tags dumped in the fitting room, an entrance corner, the cash wrap and a back corridor, sold items whose tags still read, broken size runs) are recorded in `scans/truth.json` so detection can be scored. No real company data, figures or system names are used.

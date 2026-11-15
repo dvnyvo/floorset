@@ -14,7 +14,9 @@ export const STOCKROOM = "Stockroom";
 const EARLIER_COUNTS = ["2026-09-27", "2026-10-04", "2026-10-11", "2026-10-18", "2026-10-25"];
 const FULL_COUNTS = ["2026-11-01", "2026-11-08", "2026-11-15"];
 const FLOOR_SCANS = ["2026-11-12", "2026-11-13", "2026-11-14", "2026-11-15"];
-const READ_RATE = 0.985; // chance a present, tagged unit is read
+const READ_RATE = 0.965; // chance a present, tagged unit is read
+const LOOSE_SHARE = 0.04; // share of stock stolen with the tag cut off and left in the store
+export const DUMP_AREAS = [FITTING_ROOM, ENTRANCE_CORNER, "Cash Wrap", "Back Corridor"]; // where cut tags get dropped
 
 type Scan = { date: string; type: "full_count" | "floor" };
 const SCANS: Scan[] = [
@@ -64,6 +66,13 @@ export function generateScans(seed = 7) {
   // More loose legging tags, some in the fitting room, some dropped near their own fixture (hard to catch).
   for (const [i, u] of leggings.slice(7, 40).entries()) {
     ghosts.push({ epc: u.epc, area: i % 3 === 0 ? FITTING_ROOM : homeArea(u), fromScan: i % 3, kind: "loose_tag" });
+  }
+  // Planted shrink 3: theft from back stock, building up scan by scan. The cut tags are dumped away from
+  // the stock, so they keep reading. This is what opens the gap between the raw and adjusted read rate.
+  const taken = new Set(ghosts.map((g) => g.epc));
+  const backStock = shuffle(inStock.filter((u) => u.area === "back" && u.status === "in_stock" && !stolenSilent.has(u.epc) && !taken.has(u.epc)));
+  for (const [i, u] of backStock.slice(0, Math.round(inStock.length * LOOSE_SHARE) - ghosts.length).entries()) {
+    ghosts.push({ epc: u.epc, area: DUMP_AREAS[i % DUMP_AREAS.length], fromScan: i % SCANS.length, kind: "back_stock_theft" });
   }
   // Sold items whose tags are still in the store.
   for (const [i, u] of shuffle([...sold]).slice(0, 8).entries()) {
