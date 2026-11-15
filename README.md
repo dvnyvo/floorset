@@ -1,5 +1,7 @@
 # Floorset
 
+[![CI](https://github.com/dvnyvo/floorset/actions/workflows/ci.yml/badge.svg)](https://github.com/dvnyvo/floorset/actions/workflows/ci.yml)
+
 An embedded Shopify app for the sales floor of an apparel store. It reconciles RFID scans against Shopify inventory, finds shrink that loose tags are hiding, and recommends on-standard replacements for fixtures that can no longer hold a full size run. Every change it makes to Shopify goes through propose → approve → apply → audit log → undo.
 
 Built on synthetic data for a mid-size apparel retailer scenario (see [Synthetic data](#synthetic-data)).

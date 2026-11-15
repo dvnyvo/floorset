@@ -51,3 +51,6 @@ Placed test order #1001 (1 x Alder Tee, Bone, XS) in the dev store. The `orders/
 
 ## 2026-11-15 14:10 — Wider read-rate gap, README notes
 The scan generator now plants theft from back stock with the cut tags dumped in four off-floor spots (4% of units), and the reader hit rate is 96.5%. The latest count reads 96.1% raw against 92.3% adjusted; 235 of 257 planted loose tags are flagged with no false alarms, and replenishment still finds 7 swap-outs. Scans were reloaded oldest first so every snapshot is exact. README: new numbers, notes on Admin API rate limits and webhook backfills, and a Future work section. Test order #1001 was cancelled with restock.
+
+## 2026-11-15 16:30 — On GitHub, CI green
+Pushed to a private GitHub repository. The CI workflow (lint, typecheck, tests) passed on the first run; CI badge added to the README.
