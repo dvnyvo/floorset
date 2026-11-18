@@ -59,7 +59,10 @@ export default function Replenish() {
           <s-table-body>
             {swapOuts.map((s) => (
               <s-table-row key={`${s.fixture.id}-${s.slot}`}>
-                <s-table-cell>{s.productTitle}</s-table-cell>
+                {/* The name links too: on narrow screens the Action column scrolls out of view. */}
+                <s-table-cell>
+                  <s-link href={`/app/replenish/fixtures/${s.fixture.id}?slot=${s.slot}`}>{s.productTitle}</s-link>
+                </s-table-cell>
                 <s-table-cell>
                   {s.fixture.name}, slot {s.slot + 1}
                 </s-table-cell>

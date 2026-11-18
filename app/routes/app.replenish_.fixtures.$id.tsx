@@ -171,13 +171,20 @@ function Block({
         outline: highlight ? "3px solid #2c6ecb" : "1px solid #c9cccf",
         outlineOffset: highlight ? 2 : 0,
         fontSize: 12,
+        lineHeight: 1.3,
         textAlign: "center",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
+        overflowWrap: "anywhere",
       }}
     >
-      {item ? `${item.category} · ${item.colorFamily}` : "empty"}
+      {item ? (
+        <>
+          {item.category}
+          <br />
+          {item.colorFamily}
+        </>
+      ) : (
+        "empty"
+      )}
     </div>
   );
 }
