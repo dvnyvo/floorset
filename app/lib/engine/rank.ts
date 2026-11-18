@@ -96,8 +96,15 @@ function rankOnce(
 function preferenceCategory(c: Candidate, prefs: Preferences): RuleResult {
   return !prefs.category || c.category === prefs.category
     ? pass
-    : fail("pref_category", `Not a ${prefs.category} (asked for ${prefs.category}s)`);
+    : fail("pref_category", `Not ${withArticle(prefs.category)} (asked for ${plural(prefs.category)})`);
 }
+
+// Categories that read as mass or plural nouns: "adds outerwear", "adds shorts".
+const NOUN: Record<string, string> = { outerwear: "outerwear", short: "shorts" };
+/** "a top", "an …", "outerwear", "shorts". */
+export const withArticle = (category: string) => NOUN[category] ?? `${/^[aeiou]/.test(category) ? "an" : "a"} ${category}`;
+/** "tops", "leggings", "outerwear", "shorts". */
+export const plural = (category: string) => NOUN[category] ?? `${category}s`;
 
 function preferenceColor(c: Candidate, prefs: Preferences): RuleResult {
   return !prefs.colorFamilies?.length || prefs.colorFamilies.includes(c.colorFamily)
@@ -117,7 +124,7 @@ export function explain(c: Candidate, fixture: FixtureContext, slot: number, par
   else if (left && right) bits.push(`${c.colorFamily} between ${left.colorFamily} and ${right.colorFamily}`);
   else if (left || right) bits.push(`${c.colorFamily} next to ${(left ?? right)!.colorFamily}`);
 
-  if (parts.balance === 1) bits.push(`adds a ${c.category} to the ${fixture.type}`);
+  if (parts.balance === 1) bits.push(`adds ${withArticle(c.category)} to the ${fixture.type}`);
   bits.push(`${c.weeklyVelocity.toFixed(1)} sold/week`);
   const line = bits.join(", ");
   return line.charAt(0).toUpperCase() + line.slice(1);

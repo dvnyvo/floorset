@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { rank } from "../../app/lib/engine/rank";
+import { rank, withArticle } from "../../app/lib/engine/rank";
 import { RAIL_CADENCE, cadenceFor, candidate, deepBack, item, rail } from "./helpers";
 
 // Zone 2 rail: black legging | [slot to fill] | black top | grey bra
@@ -80,6 +80,25 @@ describe("explain wording", () => {
     const fx = rail([null, item("grey", "bra", "B9")]);
     const { picks } = rank({ fixture: fx, slot: 0, candidates: [candidate({ colorFamily: "black" })], cadenceFor });
     expect(picks[0].reason).toContain("black next to grey");
+  });
+
+  it("uses the right article for each category", () => {
+    const fx = rail([null, item("grey", "bra", "B9")]);
+    const adds = (category: string) =>
+      rank({ fixture: fx, slot: 0, candidates: [candidate({ category, colorFamily: "black" })], cadenceFor }).picks[0].reason;
+    expect(adds("outerwear")).toContain("adds outerwear to the rail");
+    expect(adds("short")).toContain("adds shorts to the rail");
+    expect(adds("top")).toContain("adds a top to the rail");
+    expect(adds("legging")).toContain("adds a legging to the rail");
+    expect(withArticle("anorak")).toBe("an anorak");
+  });
+
+  it("words a category preference rejection naturally", () => {
+    const fx = rail([null, item("grey", "bra", "B9")]);
+    const r = rank({ fixture: fx, slot: 0, candidates: [candidate({ colorFamily: "black" })], cadenceFor, prefs: { category: "outerwear" } });
+    expect(r.rejected[0].reason).toBe("Not outerwear (asked for outerwear)");
+    const t = rank({ fixture: fx, slot: 0, candidates: [candidate({ colorFamily: "black" })], cadenceFor, prefs: { category: "top" } });
+    expect(t.rejected[0].reason).toBe("Not a top (asked for tops)");
   });
 });
 
