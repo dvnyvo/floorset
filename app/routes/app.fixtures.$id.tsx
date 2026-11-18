@@ -14,7 +14,7 @@ import {
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
-import { rank } from "../lib/engine/rank";
+import { colorNote, rank } from "../lib/engine/rank";
 import { COLORS, colorsIn } from "../lib/engine/colors";
 import type { ColorFamily, Preferences } from "../lib/engine/types";
 import { loadFixture } from "../lib/floor.server";
@@ -59,6 +59,13 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     prefs,
   });
   const proposals = await listProposals({ kind: "fixture_swap", fixtureId: fx.id });
+  let note: string | null = null;
+  if (prefs.colorFamilies?.length) {
+    const anyColor = rank({ fixture: fx.fixture, slot, candidates: fx.candidates, cadenceFor: fx.cadenceFor, prefs: { ...prefs, colorFamilies: undefined } });
+    const ids = (ps: typeof r.picks) => ps.map((p) => p.candidate.productId).join();
+    const kind = COLOR_KINDS.find((k) => colorsIn(k).join() === prefs.colorFamilies!.join());
+    note = colorNote(prefs.colorFamilies, fx.fixture.zone, ids(anyColor.picks) === ids(r.picks), kind);
+  }
   return {
     fixture: fx.fixture,
     slot,
@@ -83,6 +90,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       createdAt: p.createdAt.toISOString(),
     })),
     copilot: !!process.env.ANTHROPIC_API_KEY,
+    note,
   };
 };
 
@@ -170,6 +178,8 @@ function Block({
     </div>
   );
 }
+
+const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighter / Brighter buttons
 
 // What each score part measures, worded to match the engine (score.ts).
 const SCORE_PARTS = [
@@ -341,6 +351,7 @@ export default function FixtureView() {
               More contrast
             </s-button>
           </s-stack>
+          {d.note && <s-text color="subdued">{d.note}</s-text>}
         </s-stack>
       </s-section>
 

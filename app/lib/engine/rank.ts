@@ -3,7 +3,7 @@
 import { defaultConfig } from "./config";
 import { departmentFits, depth, fixtureTypeFits, fullSizeRun, notDamaged, notPlaced } from "./filters";
 import { score, type ScoreParts } from "./score";
-import { SIZES, fail, pass, type CadenceLookup, type Candidate, type EngineConfig, type FixtureContext, type Preferences, type RuleResult } from "./types";
+import { SIZES, fail, pass, type CadenceLookup, type Candidate, type ColorFamily, type EngineConfig, type FixtureContext, type Preferences, type RuleResult } from "./types";
 import { categoryMix, colorAdjacency, neighbors, zoneTheme } from "./visual";
 
 export type Stage = "stock" | "preference" | "visual";
@@ -106,6 +106,30 @@ export function salesStanding(c: Candidate, catalog: Candidate[]) {
   const place = 1 + same.filter((x) => x.weeklyVelocity > c.weeklyVelocity).length;
   return place === 1 ? `top seller of ${same.length} ${plural(c.category)}` : `#${place} of ${same.length} ${plural(c.category)} by sales`;
 }
+
+/**
+ * One line for when a color refinement can't do what its button says: the zone's palette allows few or none
+ * of the colors, or the picks come out the same as with any color. kind is the button's word ("bright").
+ */
+export function colorNote(
+  colors: ColorFamily[],
+  zone: FixtureContext["zone"],
+  samePicksAsAnyColor: boolean,
+  kind?: string,
+): string | null {
+  const allowed = colors.filter((c) => zone.palette.includes(c));
+  const palette = `${zone.name}'s palette`;
+  if (!allowed.length) return `None of the ${kind ?? "requested"} colors (${listOf(colors)}) is in ${palette}, so nothing can pass.`;
+  const is = allowed.length === 1 ? "is" : "are";
+  const limit =
+    allowed.length < colors.length
+      ? `Only ${listOf(allowed)} ${kind ? `${is} both ${kind} and in` : `of the requested colors ${is} in`} ${palette}`
+      : null;
+  if (limit) return samePicksAsAnyColor ? `${limit}, so the picks are the same as with any color.` : `${limit}.`;
+  return samePicksAsAnyColor ? `The top picks are already ${kind ?? "in the requested colors"}, so they don't change.` : null;
+}
+
+const listOf = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 
 // Categories that read as mass or plural nouns: "adds outerwear", "adds shorts".
 const NOUN: Record<string, string> = { outerwear: "outerwear", short: "shorts" };

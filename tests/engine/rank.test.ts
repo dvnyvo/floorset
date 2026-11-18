@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { rank, withArticle } from "../../app/lib/engine/rank";
+import { colorNote, rank, withArticle } from "../../app/lib/engine/rank";
+import type { ColorFamily } from "../../app/lib/engine/types";
 import { RAIL_CADENCE, cadenceFor, candidate, deepBack, item, rail } from "./helpers";
 
 // Zone 2 rail: black legging | [slot to fill] | black top | grey bra
@@ -133,5 +134,30 @@ describe("fallback when nothing has 2x depth", () => {
   });
   it("prefers strict picks when any exist", () => {
     expect(rank({ fixture, slot: 1, candidates: pool, cadenceFor }).fallback).toBe(false);
+  });
+});
+
+describe("colorNote", () => {
+  const zone2 = { name: "Zone 2", department: "womens", palette: ["cream", "pink", "lilac", "grey"] as ColorFamily[] };
+  const bright: ColorFamily[] = ["blue", "red", "pink"];
+
+  it("says when the zone palette leaves one color and the picks don't change", () => {
+    expect(colorNote(bright, zone2, true, "bright")).toBe(
+      "Only pink is both bright and in Zone 2's palette, so the picks are the same as with any color.",
+    );
+  });
+  it("says when the palette limits the colors even if the picks change", () => {
+    expect(colorNote(["blue", "pink", "lilac"], zone2, false)).toBe("Only pink and lilac of the requested colors are in Zone 2's palette.");
+  });
+  it("says when no requested color is in the palette", () => {
+    expect(colorNote(["blue", "red"], zone2, false, "bright")).toBe(
+      "None of the bright colors (blue and red) is in Zone 2's palette, so nothing can pass.",
+    );
+  });
+  it("says when every color fits but the picks are unchanged", () => {
+    expect(colorNote(["cream", "grey"], zone2, true, "light")).toBe("The top picks are already light, so they don't change.");
+  });
+  it("stays quiet when the refinement works as expected", () => {
+    expect(colorNote(["cream", "grey"], zone2, false, "light")).toBeNull();
   });
 });
