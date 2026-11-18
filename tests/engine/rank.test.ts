@@ -47,6 +47,21 @@ describe("rank", () => {
     expect(legging.reason).toContain("3.0 sold/week, #4 of 4 leggings by sales");
   });
 
+  it("scores velocity against every item in the category, not only the ones that pass", () => {
+    // Slow Jacket is the only outerwear that passes; Fast Jacket outsells it 10x but is already on the floor.
+    const r = rank({
+      fixture,
+      slot: 1,
+      cadenceFor,
+      candidates: [
+        candidate({ productId: "slow", category: "outerwear", colorFamily: "white", weeklyVelocity: 1 }),
+        candidate({ productId: "fast", category: "outerwear", colorFamily: "white", weeklyVelocity: 10, placed: true }),
+      ],
+    });
+    expect(r.picks.map((p) => p.candidate.productId)).toEqual(["slow"]);
+    expect(r.picks[0].parts.velocity).toBeCloseTo(0.1);
+  });
+
   it("returns the score parts and the weights used, so the UI can show the breakdown", () => {
     const top = result.picks[0];
     const total = (Object.keys(top.parts) as (keyof typeof top.parts)[]).reduce((n, k) => n + result.weights[k] * top.parts[k], 0);

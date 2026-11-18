@@ -79,7 +79,7 @@ function rankOnce(
 
   const picks: Pick[] = passed
     .map((c) => {
-      const s = score(c, passed, fixture, slot, config, weights);
+      const s = score(c, candidates, fixture, slot, config, weights);
       const reason = explain(c, fixture, slot, s.parts, cadenceFor, candidates);
       return { candidate: c, score: s.total, parts: s.parts, reason: fallback ? `${reason}. Fallback: fills the size run once, no back-up stock` : reason };
     })

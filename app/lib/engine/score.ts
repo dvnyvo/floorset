@@ -6,9 +6,13 @@ import { neighbors, others } from "./visual";
 
 export type ScoreParts = Record<keyof Weights, number>;
 
-/** Units sold per week, normalized against the fastest candidate in the same category. */
-export function velocity(c: Candidate, pool: Candidate[]): number {
-  const max = Math.max(0, ...pool.filter((p) => p.category === c.category).map((p) => p.weeklyVelocity));
+/**
+ * Units sold per week, normalized against the fastest item in the same category across the whole catalog.
+ * Pass every candidate, not only the ones that passed the rules: otherwise a slow seller that is the only
+ * passing item in its category scores 1.0.
+ */
+export function velocity(c: Candidate, catalog: Candidate[]): number {
+  const max = Math.max(0, ...catalog.filter((p) => p.category === c.category).map((p) => p.weeklyVelocity));
   return max > 0 ? c.weeklyVelocity / max : 0;
 }
 
@@ -35,14 +39,14 @@ export function contrast(c: Candidate, fixture: FixtureContext, slot: number): n
 
 export function score(
   c: Candidate,
-  pool: Candidate[],
+  catalog: Candidate[],
   fixture: FixtureContext,
   slot: number,
   config: EngineConfig,
   weights: Weights,
 ): { total: number; parts: ScoreParts } {
   const parts: ScoreParts = {
-    velocity: velocity(c, pool),
+    velocity: velocity(c, catalog),
     cover: cover(c, config.coverWeeksCap),
     balance: balance(c, fixture, slot, config.categoryCap),
     contrast: contrast(c, fixture, slot),
