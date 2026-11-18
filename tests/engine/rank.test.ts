@@ -35,7 +35,22 @@ describe("rank", () => {
 
   it("writes a one-line reason for each pick", () => {
     const top = result.picks.find((p) => p.candidate.productId === "white-top")!;
-    expect(top.reason).toBe("Full XXS–XL run, 60 in back, fits Zone 2 palette, breaks up two blacks, 6.0 sold/week");
+    expect(top.reason).toBe(
+      "Full XXS–XL run, 60 in back, fits Zone 2 palette, breaks up two blacks, 6.0 sold/week, top seller of 2 tops",
+    );
+  });
+
+  it("ranks sales against every item in the category, not only the ones that pass", () => {
+    const legging = result.picks.find((p) => p.candidate.productId === "grey-legging")!;
+    // Black Legging (9/week) is rejected but still sells faster; Broken Run and Placed sell 4/week.
+    expect(legging.reason).toContain("3.0 sold/week, #4 of 4 leggings by sales");
+  });
+
+  it("returns the score parts and the weights used, so the UI can show the breakdown", () => {
+    const top = result.picks[0];
+    const total = (Object.keys(top.parts) as (keyof typeof top.parts)[]).reduce((n, k) => n + result.weights[k] * top.parts[k], 0);
+    expect(total).toBeCloseTo(top.score);
+    expect(result.weights).toEqual({ velocity: 0.35, cover: 0.25, balance: 0.25, contrast: 0.15 });
   });
 
   it("caps picks at topN", () => {

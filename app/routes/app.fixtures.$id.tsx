@@ -66,8 +66,10 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     picks: r.picks.map((p) => ({
       ...p.candidate,
       score: p.score,
+      parts: p.parts,
       reason: p.reason,
     })),
+    weights: r.weights,
     passedCount: r.passedCount,
     fallback: r.fallback,
     rejected: r.rejected
@@ -168,6 +170,14 @@ function Block({
     </div>
   );
 }
+
+// What each score part measures, worded to match the engine (score.ts).
+const SCORE_PARTS = [
+  ["velocity", "Velocity", "sales vs the fastest item of its category that passes every rule"],
+  ["cover", "Cover", "weeks of sales the back stock covers, full at 12"],
+  ["balance", "Balance", "1 if the fixture has none of its category yet"],
+  ["contrast", "Contrast", "lightness difference from its neighbors"],
+] as const;
 
 const STATUS_TONE = {
   pending: "info",
@@ -363,7 +373,17 @@ export default function FixtureView() {
                       {i + 1}. {p.title}
                     </s-text>
                     <s-text>{p.reason}</s-text>
-                    <s-text color="subdued">Score {p.score.toFixed(2)}</s-text>
+                    <details>
+                      <summary>Score {p.score.toFixed(2)}: breakdown</summary>
+                      <s-stack gap="small-300">
+                        {SCORE_PARTS.map(([k, label, how]) => (
+                          <s-text key={k} color="subdued">
+                            {label} {p.parts[k].toFixed(2)} × {d.weights[k].toFixed(2)} ={" "}
+                            {(p.parts[k] * d.weights[k]).toFixed(2)} · {how}
+                          </s-text>
+                        ))}
+                      </s-stack>
+                    </details>
                   </s-stack>
                   <s-button
                     disabled={busy || !d.fixture.slots[d.slot]}

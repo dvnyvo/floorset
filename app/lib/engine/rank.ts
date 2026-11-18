@@ -80,7 +80,7 @@ function rankOnce(
   const picks: Pick[] = passed
     .map((c) => {
       const s = score(c, passed, fixture, slot, config, weights);
-      const reason = explain(c, fixture, slot, s.parts, cadenceFor);
+      const reason = explain(c, fixture, slot, s.parts, cadenceFor, candidates);
       return { candidate: c, score: s.total, parts: s.parts, reason: fallback ? `${reason}. Fallback: fills the size run once, no back-up stock` : reason };
     })
     .sort((a, b) => b.score - a.score || a.candidate.title.localeCompare(b.candidate.title))
@@ -90,13 +90,21 @@ function rankOnce(
   const order: Record<Stage, number> = { visual: 0, preference: 1, stock: 2 };
   rejected.sort((a, b) => order[a.stage] - order[b.stage] || b.candidate.weeklyVelocity - a.candidate.weeklyVelocity);
 
-  return { picks, rejected, passedCount: passed.length, fallback };
+  return { picks, rejected, passedCount: passed.length, fallback, weights };
 }
 
 function preferenceCategory(c: Candidate, prefs: Preferences): RuleResult {
   return !prefs.category || c.category === prefs.category
     ? pass
     : fail("pref_category", `Not ${withArticle(prefs.category)} (asked for ${plural(prefs.category)})`);
+}
+
+/** Where this item's sales sit among every item in its category: "top seller of 18 tops", "#14 of 18 outerwear by sales". */
+export function salesStanding(c: Candidate, catalog: Candidate[]) {
+  const same = catalog.filter((x) => x.category === c.category);
+  if (same.length < 2) return null;
+  const place = 1 + same.filter((x) => x.weeklyVelocity > c.weeklyVelocity).length;
+  return place === 1 ? `top seller of ${same.length} ${plural(c.category)}` : `#${place} of ${same.length} ${plural(c.category)} by sales`;
 }
 
 // Categories that read as mass or plural nouns: "adds outerwear", "adds shorts".
@@ -113,7 +121,14 @@ function preferenceColor(c: Candidate, prefs: Preferences): RuleResult {
 }
 
 /** One-line reason, e.g. "Full XXS–XL run, 28 in back, fits Zone 2 palette, breaks up two greys, adds a top". */
-export function explain(c: Candidate, fixture: FixtureContext, slot: number, parts: ScoreParts, cadenceFor: CadenceLookup) {
+export function explain(
+  c: Candidate,
+  fixture: FixtureContext,
+  slot: number,
+  parts: ScoreParts,
+  cadenceFor: CadenceLookup,
+  catalog: Candidate[],
+) {
   const cadence = cadenceFor(fixture.type, c.category) ?? {};
   const run = SIZES.filter((s) => (cadence[s] ?? 0) > 0);
   const inBack = SIZES.reduce((n, s) => n + (c.back[s] ?? 0), 0);
@@ -126,6 +141,8 @@ export function explain(c: Candidate, fixture: FixtureContext, slot: number, par
 
   if (parts.balance === 1) bits.push(`adds ${withArticle(c.category)} to the ${fixture.type}`);
   bits.push(`${c.weeklyVelocity.toFixed(1)} sold/week`);
+  const standing = salesStanding(c, catalog);
+  if (standing) bits.push(standing);
   const line = bits.join(", ");
   return line.charAt(0).toUpperCase() + line.slice(1);
 }
