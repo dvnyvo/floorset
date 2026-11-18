@@ -194,10 +194,9 @@ const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighte
 
 // What each score part measures, worded to match the engine (score.ts).
 const SCORE_PARTS = [
-  ["velocity", "Velocity", "sales vs the fastest seller in its category, across the whole catalog"],
-  ["cover", "Cover", "weeks of sales the back stock covers, full at 12"],
-  ["balance", "Balance", "1 if the fixture has none of its category yet"],
   ["contrast", "Contrast", "lightness difference from its neighbors"],
+  ["velocity", "Velocity", "sales vs the fastest seller in its category, across the whole catalog"],
+  ["cover", "Cover", "weeks of sales the back stock covers, full at 4"],
 ] as const;
 
 const STATUS_TONE = {

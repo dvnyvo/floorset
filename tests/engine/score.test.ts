@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { balance, contrast, cover, velocity } from "../../app/lib/engine/score";
+import { defaultConfig } from "../../app/lib/engine/config";
+import { contrast, cover, velocity } from "../../app/lib/engine/score";
 import { candidate, item, rail } from "./helpers";
 
 describe("score parts", () => {
@@ -9,15 +10,10 @@ describe("score parts", () => {
     expect(velocity(candidate({ weeklyVelocity: 0 }), [candidate({ weeklyVelocity: 0 })])).toBe(0);
   });
 
-  it("caps cover at the configured weeks", () => {
-    expect(cover(candidate({ back: { S: 12 }, weeklyVelocity: 2 }), 12)).toBe(0.5); // 6 weeks
-    expect(cover(candidate({ back: { S: 100 }, weeklyVelocity: 1 }), 12)).toBe(1);
-  });
-
-  it("rewards categories the fixture lacks", () => {
-    const fixture = rail([item("black", "legging"), null, item("white", "top")]);
-    expect(balance(candidate({ category: "bra" }), fixture, 1, 2)).toBe(1);
-    expect(balance(candidate({ category: "legging" }), fixture, 1, 2)).toBe(0.5);
+  it("caps cover at 4 weeks of supply", () => {
+    expect(defaultConfig.coverWeeksCap).toBe(4);
+    expect(cover(candidate({ back: { S: 4 }, weeklyVelocity: 2 }), 4)).toBe(0.5); // 2 weeks
+    expect(cover(candidate({ back: { S: 100 }, weeklyVelocity: 1 }), 4)).toBe(1);
   });
 
   it("measures tone distance from neighbors", () => {

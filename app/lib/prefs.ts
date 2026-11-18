@@ -4,7 +4,7 @@ import type { Preferences } from "./engine/types";
 
 export { COLOR_FAMILIES };
 export const CATEGORIES = ["legging", "bra", "top", "outerwear", "short", "jogger"];
-const CONTRAST_BOOST = 0.45; // "more contrast": weight up from the default 0.15
+const CONTRAST_BOOST = 0.8; // "more contrast": weight up from the default 0.40
 
 export interface PrefsInput {
   category?: string;

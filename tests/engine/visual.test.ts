@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { categoryMix, colorAdjacency, zoneTheme } from "../../app/lib/engine/visual";
-import { candidate, item, rail } from "./helpers";
+import { roleOf } from "../../app/lib/engine/roles";
+import type { Candidate, FixtureContext } from "../../app/lib/engine/types";
+import { colorAdjacency, outfitRole, zoneTheme } from "../../app/lib/engine/visual";
+import { candidate, item, rail, table } from "./helpers";
 
 describe("zoneTheme", () => {
   it("accepts a color family in the zone palette", () => {
@@ -43,20 +45,56 @@ describe("colorAdjacency", () => {
   });
 });
 
-describe("categoryMix", () => {
-  const fixture = rail([item("black", "legging", "a"), item("grey", "legging", "b"), item("white", "top")]);
+describe("outfitRole", () => {
+  const top = candidate({ category: "top" });
+  const bottom = candidate({ category: "legging" });
+  const coverup = candidate({ category: "outerwear" });
+  const empty = (n: number) => Array.from({ length: n }, () => null);
+  const fits = (fixture: FixtureContext, c: Candidate) => fixture.slots.map((_, i) => outfitRole(c, fixture, i).ok);
 
-  it("blocks a third legging style on the rail", () => {
-    expect(categoryMix(candidate({ category: "legging" }), fixture, 2, 2)).toEqual({
-      ok: false,
-      rule: "category_cap",
-      reason: "Rail already has 2 legging styles (max 2)",
+  it("follows top → bottom → cover-up on women's rails, repeating per outfit", () => {
+    const fx = rail(empty(6));
+    expect(fits(fx, top)).toEqual([true, false, false, true, false, false]);
+    expect(fits(fx, bottom)).toEqual([false, true, false, false, true, false]);
+    expect(fits(fx, coverup)).toEqual([false, false, true, false, false, true]);
+    expect(outfitRole(top, fx, 2)).toEqual({ ok: false, rule: "outfit_role", reason: "Slot 3 is a cover-up slot (top → bottom → cover-up)" });
+  });
+
+  it("follows cover-up → top → bottom on men's rails, repeating per outfit", () => {
+    const fx = rail(empty(6), undefined, "mens");
+    expect(fits(fx, coverup)).toEqual([true, false, false, true, false, false]);
+    expect(fits(fx, top)).toEqual([false, true, false, false, true, false]);
+    expect(fits(fx, bottom)).toEqual([false, false, true, false, false, true]);
+    expect(outfitRole(bottom, fx, 0)).toMatchObject({ reason: "Slot 1 is a cover-up slot (cover-up → top → bottom)" });
+  });
+
+  it("puts tops and cover-ups on the left half of a table, bottoms on the right", () => {
+    for (const dept of ["womens", "mens"]) {
+      expect(fits(table(empty(3), dept), top)).toEqual([true, true, false]);
+      expect(fits(table(empty(3), dept), bottom)).toEqual([false, false, true]);
+      expect(fits(table(empty(4), dept), bottom)).toEqual([false, false, true, true]);
+    }
+    expect(outfitRole(bottom, table(empty(3)), 0)).toMatchObject({
+      reason: "Slot 1 is a top or cover-up slot (tops and cover-ups on the left, bottoms on the right)",
+    });
+    expect(outfitRole(top, table(empty(3)), 2)).toMatchObject({
+      reason: "Slot 3 is a bottom slot (tops and cover-ups on the left, bottoms on the right)",
     });
   });
-  it("allows a legging when it replaces one of the two", () => {
-    expect(categoryMix(candidate({ category: "legging" }), fixture, 0, 2).ok).toBe(true);
+
+  it("never puts outerwear on a table, even on the cover-up side", () => {
+    expect(fits(table(empty(3)), coverup)).toEqual([false, false, false]);
+    expect(outfitRole(coverup, table(empty(3)), 0)).toEqual({
+      ok: false,
+      rule: "outerwear_table",
+      reason: "Outerwear goes on rails, never on a table",
+    });
   });
-  it("allows another category", () => {
-    expect(categoryMix(candidate({ category: "top" }), fixture, 2, 2).ok).toBe(true);
+
+  it("counts a long sleeve as a cover-up, though its category is top", () => {
+    expect(roleOf("Long Sleeve")).toBe("coverup");
+    const longSleeve = candidate({ category: "top", role: roleOf("long sleeve") });
+    expect(fits(rail(empty(3)), longSleeve)).toEqual([false, false, true]);
+    expect(fits(table(empty(3)), longSleeve)).toEqual([true, true, false]); // not outerwear, so it may go on a table
   });
 });

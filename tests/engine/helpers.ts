@@ -1,3 +1,4 @@
+import { roleOf } from "../../app/lib/engine/roles";
 import type { CadenceLookup, Candidate, ColorFamily, FixtureContext, SizeCounts, SlotItem } from "../../app/lib/engine/types";
 
 export const RAIL_CADENCE: SizeCounts = { XXS: 1, XS: 2, S: 3, M: 3, L: 2, XL: 1 };
@@ -12,6 +13,7 @@ export function candidate(over: Partial<Candidate> = {}): Candidate {
     productId: over.productId ?? "p-cand",
     title: over.title ?? "Test Legging - Lilac",
     category: "legging",
+    role: roleOf(over.category ?? "legging") ?? "top", // from the category unless the test sets it
     department: "womens",
     colorFamily: "white",
     fixtureType: "both",
@@ -30,6 +32,12 @@ export const item = (colorFamily: ColorFamily, category = "top", id = `${categor
   colorFamily,
 });
 
-export function rail(slots: (SlotItem | null)[], palette: ColorFamily[] = ["grey", "white", "black"]): FixtureContext {
-  return { name: "Zone 2 Rail 1", type: "rail", zone: { name: "Zone 2", department: "womens", palette }, slots };
+export function rail(slots: (SlotItem | null)[], palette: ColorFamily[] = ["grey", "white", "black"], department = "womens"): FixtureContext {
+  return { name: "Zone 2 Rail 1", type: "rail", zone: { name: "Zone 2", department, palette }, slots };
 }
+
+export const table = (slots: (SlotItem | null)[], department = "womens"): FixtureContext => ({
+  ...rail(slots, undefined, department),
+  name: "Zone 2 Table 1",
+  type: "table",
+});
