@@ -79,10 +79,13 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     weights: r.weights,
     passedCount: r.passedCount,
     fallback: r.fallback,
-    rejected: r.rejected
-      .slice(0, 25)
-      .map((x) => ({ ...x.candidate, stage: x.stage, reason: x.reason })),
-    rejectedCount: r.rejected.length,
+    // Already sorted by the engine: visual rejections first, then preference, then stock.
+    rejected: r.rejected.map((x) => ({
+      productId: x.candidate.productId,
+      title: x.candidate.title,
+      stage: x.stage,
+      reason: x.reason,
+    })),
     proposals: proposals.map((p) => ({
       id: p.id,
       status: p.status,
@@ -179,6 +182,7 @@ function Block({
   );
 }
 
+const REJECTED_SHOWN = 10;
 const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighter / Brighter buttons
 
 // What each score part measures, worded to match the engine (score.ts).
@@ -205,6 +209,8 @@ export default function FixtureView() {
   const act = useFetcher<typeof action>();
   const chat = useFetcher<typeof action>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [allRejected, setAllRejected] = useState(false);
+  const rejected = allRejected ? d.rejected : d.rejected.slice(0, REJECTED_SHOWN);
 
   const top = d.picks[0];
   const after = d.fixture.slots.map((s, i) => (i === d.slot && top ? top : s));
@@ -518,7 +524,7 @@ export default function FixtureView() {
         )}
       </s-section>
 
-      <s-section heading={`Rejected (${d.rejectedCount})`}>
+      <s-section heading={`Rejected (${d.rejected.length})`}>
         <s-table>
           <s-table-header-row>
             <s-table-header listSlot="primary">Item</s-table-header>
@@ -526,7 +532,7 @@ export default function FixtureView() {
             <s-table-header>Why</s-table-header>
           </s-table-header-row>
           <s-table-body>
-            {d.rejected.map((x) => (
+            {rejected.map((x) => (
               <s-table-row key={x.productId}>
                 <s-table-cell>{x.title}</s-table-cell>
                 <s-table-cell>
@@ -547,6 +553,11 @@ export default function FixtureView() {
             ))}
           </s-table-body>
         </s-table>
+        {d.rejected.length > REJECTED_SHOWN && (
+          <s-button variant="tertiary" onClick={() => setAllRejected(!allRejected)}>
+            {allRejected ? `Show first ${REJECTED_SHOWN}` : `Show all (${d.rejected.length})`}
+          </s-button>
+        )}
       </s-section>
     </s-page>
   );
