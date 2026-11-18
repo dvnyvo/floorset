@@ -65,7 +65,7 @@ export default function Replenish() {
                 </s-table-cell>
                 <s-table-cell>{s.reason}</s-table-cell>
                 <s-table-cell>
-                  <s-button href={`/app/fixtures/${s.fixture.id}?slot=${s.slot}`}>Find replacement</s-button>
+                  <s-button href={`/app/replenish/fixtures/${s.fixture.id}?slot=${s.slot}`}>Find replacement</s-button>
                 </s-table-cell>
               </s-table-row>
             ))}

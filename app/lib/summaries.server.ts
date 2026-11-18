@@ -41,7 +41,7 @@ export function saveReadRate(d: Awaited<ReturnType<typeof loadDashboard>>) {
 
 // shortcut: assumes the app handle "floorset"; read it from the app config if the handle changes.
 const fixtureLink = (shop: string, fixtureId: string, slot: number) =>
-  `https://${shop}/admin/apps/floorset/app/fixtures/${fixtureId}?slot=${slot}`;
+  `https://${shop}/admin/apps/floorset/app/replenish/fixtures/${fixtureId}?slot=${slot}`;
 
 export function saveSwapOuts(r: Awaited<ReturnType<typeof loadReplenishment>>, shop: string) {
   if (!r.scan) return;
