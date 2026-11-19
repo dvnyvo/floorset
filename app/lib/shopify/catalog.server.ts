@@ -1,5 +1,6 @@
 // Reads the catalog and per-location inventory from Shopify (the source of truth for counts).
-import type { ColorFamily, FixtureType } from "../engine/types";
+import { roleOf } from "../engine/roles";
+import type { ColorFamily, FixtureType, Role } from "../engine/types";
 
 /** The slice of the Admin API client we use; matches `admin` from authenticate.admin(). */
 export interface AdminClient {
@@ -14,6 +15,7 @@ export interface CatalogVariant {
   productId: string;
   productTitle: string;
   category: string;
+  role: Role;
   colorFamily: ColorFamily;
   fixtureType: FixtureType | "both";
   department: string;
@@ -30,6 +32,7 @@ export const CATALOG_QUERY = `#graphql
         id
         title
         category: metafield(namespace: "$app", key: "category") { value }
+        role: metafield(namespace: "$app", key: "role") { value }
         colorFamily: metafield(namespace: "$app", key: "color_family") { value }
         fixtureType: metafield(namespace: "$app", key: "fixture_type") { value }
         department: metafield(namespace: "$app", key: "department") { value }
@@ -68,6 +71,7 @@ type ProductNode = {
   id: string;
   title: string;
   category: { value: string } | null;
+  role: { value: string } | null;
   colorFamily: { value: string } | null;
   fixtureType: { value: string } | null;
   department: { value: string } | null;
@@ -123,6 +127,8 @@ async function readCatalog(admin: AdminClient): Promise<Catalog> {
           productId: p.id,
           productTitle: p.title,
           category: p.category.value,
+          // Older products have no role metafield: derive it from the category.
+          role: (p.role?.value ?? roleOf(p.category.value) ?? "top") as Role,
           colorFamily: (p.colorFamily?.value ?? "grey") as ColorFamily,
           fixtureType: (p.fixtureType?.value ?? "both") as FixtureType | "both",
           department: p.department?.value ?? "womens",

@@ -4,7 +4,7 @@ import { defaultConfig } from "./config";
 import { departmentFits, depth, fixtureTypeFits, fullSizeRun, notDamaged, notPlaced } from "./filters";
 import { score, type ScoreParts } from "./score";
 import { SIZES, fail, pass, type CadenceLookup, type Candidate, type ColorFamily, type EngineConfig, type FixtureContext, type Preferences, type RuleResult } from "./types";
-import { categoryMix, colorAdjacency, neighbors, zoneTheme } from "./visual";
+import { colorAdjacency, neighbors, outfitRole, zoneTheme } from "./visual";
 
 export type Stage = "stock" | "preference" | "visual";
 
@@ -61,9 +61,9 @@ function rankOnce(
       ["stock", () => depth(c, cadence!, config.depthMultiplier)],
       ["preference", () => preferenceCategory(c, prefs)],
       ["preference", () => preferenceColor(c, prefs)],
+      ["visual", () => outfitRole(c, fixture, slot)],
       ["visual", () => zoneTheme(c, fixture)],
       ["visual", () => colorAdjacency(c, fixture, slot)],
-      ["visual", () => categoryMix(c, fixture, slot, config.categoryCap)],
     ];
     let failed: Rejection | null = null;
     for (const [stage, rule] of stages) {
@@ -80,7 +80,7 @@ function rankOnce(
   const picks: Pick[] = passed
     .map((c) => {
       const s = score(c, candidates, fixture, slot, config, weights);
-      const reason = explain(c, fixture, slot, s.parts, cadenceFor, candidates);
+      const reason = explain(c, fixture, slot, cadenceFor, candidates);
       return { candidate: c, score: s.total, parts: s.parts, reason: fallback ? `${reason}. Fallback: fills the size run once, no back-up stock` : reason };
     })
     .sort((a, b) => b.score - a.score || a.candidate.title.localeCompare(b.candidate.title))
@@ -149,7 +149,6 @@ export function explain(
   c: Candidate,
   fixture: FixtureContext,
   slot: number,
-  parts: ScoreParts,
   cadenceFor: CadenceLookup,
   catalog: Candidate[],
 ) {
@@ -163,7 +162,6 @@ export function explain(
   else if (left && right) bits.push(`${c.colorFamily} between ${left.colorFamily} and ${right.colorFamily}`);
   else if (left || right) bits.push(`${c.colorFamily} next to ${(left ?? right)!.colorFamily}`);
 
-  if (parts.balance === 1) bits.push(`adds ${withArticle(c.category)} to the ${fixture.type}`);
   bits.push(`${c.weeklyVelocity.toFixed(1)} sold/week`);
   const standing = salesStanding(c, catalog);
   if (standing) bits.push(standing);

@@ -4,7 +4,8 @@ export const SIZES = ["XXS", "XS", "S", "M", "L", "XL"] as const;
 export type Size = (typeof SIZES)[number];
 export type SizeCounts = Partial<Record<Size, number>>;
 import type { ColorFamily } from "./colors";
-export type { ColorFamily };
+import type { Role } from "./roles";
+export type { ColorFamily, Role };
 export type FixtureType = "rail" | "table";
 
 /** A style-color that could fill a slot. Counts are sellable units only. */
@@ -12,6 +13,7 @@ export interface Candidate {
   productId: string;
   title: string;
   category: string;
+  role: Role; // outfit role: top, bottom or cover-up
   department: string;
   colorFamily: ColorFamily;
   fixtureType: FixtureType | "both";
@@ -41,7 +43,6 @@ export type CadenceLookup = (fixtureType: FixtureType, category: string) => Size
 export interface Weights {
   velocity: number;
   cover: number;
-  balance: number;
   contrast: number;
 }
 
@@ -54,7 +55,6 @@ export interface Preferences {
 
 export interface EngineConfig {
   weights: Weights;
-  categoryCap: number; // max styles of one category per fixture
   depthMultiplier: number; // back stock must refill the cadence this many times
   coverWeeksCap: number; // cover score saturates at this many weeks
   topN: number;

@@ -1,4 +1,5 @@
 // Stage 2: visual standards (hard). Each rule returns a plain-English reason on failure.
+import { roleLabel, sequenceText, slotRoles } from "./roles";
 import { fail, pass, type Candidate, type FixtureContext, type RuleResult, type SlotItem } from "./types";
 
 export function zoneTheme(c: Candidate, fixture: FixtureContext): RuleResult {
@@ -20,20 +21,23 @@ export function colorAdjacency(c: Candidate, fixture: FixtureContext, slot: numb
   return pass;
 }
 
-/** Max N styles of one category per fixture, ignoring the item being swapped out. */
-export function categoryMix(c: Candidate, fixture: FixtureContext, slot: number, categoryCap: number): RuleResult {
-  const count = others(fixture, slot).filter((s) => s.category === c.category).length;
-  return count < categoryCap
-    ? pass
-    : fail("category_cap", `${cap(fixture.type)} already has ${count} ${c.category} styles (max ${categoryCap})`);
+/**
+ * Outfit standard: the replacement must have the role its slot needs (rails repeat the department's outfit,
+ * tables put tops and cover-ups left and bottoms right). Outerwear is rail-only.
+ */
+export function outfitRole(c: Candidate, fixture: FixtureContext, slot: number): RuleResult {
+  if (fixture.type === "table" && c.category === "outerwear") return fail("outerwear_table", "Outerwear goes on rails, never on a table");
+  const accepts = slotRoles(fixture.type, fixture.zone.department, fixture.slots.length)[slot] ?? [];
+  if (accepts.includes(c.role)) return pass;
+  const label = roleLabel(accepts);
+  return fail(
+    "outfit_role",
+    `Slot ${slot + 1} is ${/^[aeiou]/.test(label) ? "an" : "a"} ${label} slot (${sequenceText(fixture.type, fixture.zone.department)})`,
+  );
 }
 
 export function neighbors(fixture: FixtureContext, slot: number): { left: SlotItem | null; right: SlotItem | null } {
   return { left: fixture.slots[slot - 1] ?? null, right: fixture.slots[slot + 1] ?? null };
-}
-
-export function others(fixture: FixtureContext, slot: number): SlotItem[] {
-  return fixture.slots.filter((s, i): s is SlotItem => s !== null && i !== slot);
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

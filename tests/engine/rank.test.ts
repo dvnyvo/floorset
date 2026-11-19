@@ -3,14 +3,15 @@ import { colorNote, rank, withArticle } from "../../app/lib/engine/rank";
 import type { ColorFamily } from "../../app/lib/engine/types";
 import { RAIL_CADENCE, cadenceFor, candidate, deepBack, item, rail } from "./helpers";
 
-// Zone 2 rail: black legging | [slot to fill] | black top | grey bra
-const fixture = rail([item("black", "legging", "L1"), null, item("black", "top", "T1"), item("grey", "bra", "B1")]);
+// Women's rail, outfit top -> bottom -> cover-up: black top | [bottom slot to fill] | black jacket | grey bra
+const fixture = rail([item("black", "top", "T0"), null, item("black", "outerwear", "J1"), item("grey", "bra", "B1")]);
 
 const pool = [
-  candidate({ productId: "white-top", title: "White Top", category: "top", colorFamily: "white", weeklyVelocity: 6 }),
-  candidate({ productId: "grey-legging", title: "Grey Legging", category: "legging", colorFamily: "grey", weeklyVelocity: 3 }),
+  candidate({ productId: "white-legging", title: "White Legging", colorFamily: "white", weeklyVelocity: 6 }),
+  candidate({ productId: "grey-legging", title: "Grey Legging", colorFamily: "grey", weeklyVelocity: 3 }),
   candidate({ productId: "black-legging", title: "Black Legging", colorFamily: "black", weeklyVelocity: 9 }),
-  candidate({ productId: "red-top", title: "Red Top", category: "top", colorFamily: "red", weeklyVelocity: 5 }),
+  candidate({ productId: "red-legging", title: "Red Legging", colorFamily: "red", weeklyVelocity: 5 }),
+  candidate({ productId: "white-top", title: "White Top", category: "top", colorFamily: "white", weeklyVelocity: 6 }),
   candidate({ productId: "broken", title: "Broken Run", colorFamily: "white", back: { ...deepBack(), S: 0 } }),
   candidate({ productId: "placed", title: "Placed", colorFamily: "white", placed: true }),
 ];
@@ -20,38 +21,39 @@ describe("rank", () => {
   const rejection = (id: string) => result.rejected.find((r) => r.candidate.productId === id);
 
   it("only picks candidates that pass every hard rule", () => {
-    expect(result.picks.map((p) => p.candidate.productId).sort()).toEqual(["grey-legging", "white-top"]);
+    expect(result.picks.map((p) => p.candidate.productId).sort()).toEqual(["grey-legging", "white-legging"]);
   });
 
   it("explains each rejection with the rule that failed", () => {
     expect(rejection("black-legging")).toMatchObject({ stage: "visual", reason: "Would put 3 black items in a row" });
-    expect(rejection("red-top")).toMatchObject({ stage: "visual", rule: "zone_palette" });
+    expect(rejection("red-legging")).toMatchObject({ stage: "visual", rule: "zone_palette" });
+    expect(rejection("white-top")).toMatchObject({ stage: "visual", reason: "Slot 2 is a bottom slot (top → bottom → cover-up)" });
     expect(rejection("broken")).toMatchObject({ stage: "stock", rule: "size_run" });
     expect(rejection("placed")).toMatchObject({ stage: "stock", rule: "already_placed" });
   });
 
   it("lists visual rejections before stock rejections", () => {
-    expect(result.rejected.map((r) => r.stage)).toEqual(["visual", "visual", "stock", "stock"]);
+    expect(result.rejected.map((r) => r.stage)).toEqual(["visual", "visual", "visual", "stock", "stock"]);
   });
 
   it("writes a one-line reason for each pick", () => {
-    const top = result.picks.find((p) => p.candidate.productId === "white-top")!;
-    expect(top.reason).toBe(
-      "Full XXS–XL run, 60 in back, fits Zone 2 palette, breaks up two blacks, 6.0 sold/week, top seller of 2 tops",
+    const pick = result.picks.find((p) => p.candidate.productId === "white-legging")!;
+    expect(pick.reason).toBe(
+      "Full XXS–XL run, 60 in back, fits Zone 2 palette, breaks up two blacks, 6.0 sold/week, #2 of 6 leggings by sales",
     );
   });
 
   it("ranks sales against every item in the category, not only the ones that pass", () => {
     const legging = result.picks.find((p) => p.candidate.productId === "grey-legging")!;
-    // Black Legging (9/week) is rejected but still sells faster; Broken Run and Placed sell 4/week.
-    expect(legging.reason).toContain("3.0 sold/week, #4 of 4 leggings by sales");
+    // Black and Red Legging are rejected but still sell faster; Broken Run and Placed sell 4/week.
+    expect(legging.reason).toContain("3.0 sold/week, #6 of 6 leggings by sales");
   });
 
   it("scores velocity against every item in the category, not only the ones that pass", () => {
     // Slow Jacket is the only outerwear that passes; Fast Jacket outsells it 10x but is already on the floor.
     const r = rank({
       fixture,
-      slot: 1,
+      slot: 2, // the cover-up slot
       cadenceFor,
       candidates: [
         candidate({ productId: "slow", category: "outerwear", colorFamily: "white", weeklyVelocity: 1 }),
@@ -66,32 +68,33 @@ describe("rank", () => {
     const top = result.picks[0];
     const total = (Object.keys(top.parts) as (keyof typeof top.parts)[]).reduce((n, k) => n + result.weights[k] * top.parts[k], 0);
     expect(total).toBeCloseTo(top.score);
-    expect(result.weights).toEqual({ velocity: 0.35, cover: 0.25, balance: 0.25, contrast: 0.15 });
+    expect(result.weights).toEqual({ velocity: 0.35, cover: 0.25, contrast: 0.4 });
   });
 
   it("caps picks at topN", () => {
     const many = Array.from({ length: 10 }, (_, i) =>
-      candidate({ productId: `p${i}`, title: `P${i}`, category: "top", colorFamily: i % 2 ? "white" : "grey" }),
+      candidate({ productId: `p${i}`, title: `P${i}`, colorFamily: i % 2 ? "white" : "grey" }),
     );
     expect(rank({ fixture, slot: 1, candidates: many, cadenceFor }).picks).toHaveLength(3);
   });
 
   it("applies a category preference as a filter, not an override", () => {
-    const r = rank({ fixture, slot: 1, candidates: pool, cadenceFor, prefs: { category: "legging" } });
-    expect(r.picks.map((p) => p.candidate.productId)).toEqual(["grey-legging"]);
-    expect(r.rejected.find((x) => x.candidate.productId === "white-top")).toMatchObject({ stage: "preference" });
+    const jogger = candidate({ productId: "white-jogger", category: "jogger" });
+    const r = rank({ fixture, slot: 1, candidates: [...pool, jogger], cadenceFor, prefs: { category: "legging" } });
+    expect(r.picks.map((p) => p.candidate.productId).sort()).toEqual(["grey-legging", "white-legging"]);
+    expect(r.rejected.find((x) => x.candidate.productId === "white-jogger")).toMatchObject({ stage: "preference" });
   });
 
   it("a color preference can't bring back a hard-rule failure", () => {
     const r = rank({ fixture, slot: 1, candidates: pool, cadenceFor, prefs: { colorFamilies: ["red"] } });
     expect(r.picks).toHaveLength(0);
-    expect(r.rejected.find((x) => x.candidate.productId === "red-top")).toMatchObject({ rule: "zone_palette" });
+    expect(r.rejected.find((x) => x.candidate.productId === "red-legging")).toMatchObject({ rule: "zone_palette" });
   });
 
   it("a contrast boost reorders picks", () => {
     const cands = [
-      candidate({ productId: "fast-grey", title: "Fast Grey", category: "top", colorFamily: "grey", weeklyVelocity: 10 }),
-      candidate({ productId: "slow-white", title: "Slow White", category: "top", colorFamily: "white", weeklyVelocity: 2 }),
+      candidate({ productId: "fast-grey", title: "Fast Grey", colorFamily: "grey", weeklyVelocity: 10 }),
+      candidate({ productId: "slow-white", title: "Slow White", colorFamily: "white", weeklyVelocity: 2 }),
     ];
     const base = rank({ fixture, slot: 1, candidates: cands, cadenceFor });
     expect(base.picks[0].candidate.productId).toBe("fast-grey");
@@ -109,18 +112,14 @@ describe("rank", () => {
 describe("explain wording", () => {
   it("says 'next to' for an edge slot", () => {
     const fx = rail([null, item("grey", "bra", "B9")]);
-    const { picks } = rank({ fixture: fx, slot: 0, candidates: [candidate({ colorFamily: "black" })], cadenceFor });
+    const { picks } = rank({ fixture: fx, slot: 0, candidates: [candidate({ category: "top", colorFamily: "black" })], cadenceFor });
     expect(picks[0].reason).toContain("black next to grey");
   });
 
   it("uses the right article for each category", () => {
-    const fx = rail([null, item("grey", "bra", "B9")]);
-    const adds = (category: string) =>
-      rank({ fixture: fx, slot: 0, candidates: [candidate({ category, colorFamily: "black" })], cadenceFor }).picks[0].reason;
-    expect(adds("outerwear")).toContain("adds outerwear to the rail");
-    expect(adds("short")).toContain("adds shorts to the rail");
-    expect(adds("top")).toContain("adds a top to the rail");
-    expect(adds("legging")).toContain("adds a legging to the rail");
+    expect(withArticle("outerwear")).toBe("outerwear");
+    expect(withArticle("short")).toBe("shorts");
+    expect(withArticle("top")).toBe("a top");
     expect(withArticle("anorak")).toBe("an anorak");
   });
 

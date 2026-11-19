@@ -29,10 +29,10 @@ An optional Claude copilot on the fixture view turns requests like "something br
 
 ## Demo (5 minutes)
 
-1. **Read rate.** The store reads 96.1%, above the 95% target. With suspected loose tags taken out it reads 92.3%: 3.8 points of shrink the headline number hides. The chart shows the adjusted rate holding near 96% for six counts and then falling as loose tags pile up, while bras slide from 95% to 88%.
-2. **Loose tags.** 235 suspects, almost all in four spots where no stock belongs: the fitting room, an entrance corner, the cash wrap and a back corridor. Mark one "Tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
-3. **Replenishment.** 7 items can't hold their size run. Click **Find replacement**.
-4. **Fixture view.** The before row shows the rail; the after row shows it with the top pick. Each pick says why in plain English (size run, back stock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap.
+1. **Read rate.** The store reads 96.1%, above the 95% target. With suspected loose tags taken out it reads 92.3%: 3.8 points of shrink the headline number hides. The chart shows the adjusted rate holding near 96% for six counts and then falling as loose tags pile up, while bras slide from 96% to 89%.
+2. **Loose tags.** 237 suspects, almost all in four spots where no stock belongs: the fitting room, an entrance corner, the cash wrap and a back corridor. Mark one "Tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
+3. **Replenishment.** 7 items can't hold their size run. Click **Find replacement** on Zone 2 Rail 2.
+4. **Fixture view.** The before row shows the rail grouped into outfits, each slot labelled with the role it needs; the after row shows it with the top pick. Each pick says why in plain English (size run, back stock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap.
 5. **Sidekick.** Ask "Which floor items need replacing?" and follow the link back to the fixture view.
 
 ## Architecture
@@ -75,7 +75,9 @@ Shopify stays the source of truth for products and counts. The app database hold
 
 ## Design decisions
 
-- **A deterministic rules engine, with the LLM kept at the edge.** Ranking is pure functions: stock rules (full size run, 2× depth, not damaged, fixture type, department), then preferences, then visual standards (zone palette, color adjacency, max 2 styles per category), then a weighted score. The engine is unit-tested and explainable. The copilot can only change preferences, which narrow or re-weight; it can't loosen a rule, and its propose tool rejects anything outside the engine's current picks.
+- **A deterministic rules engine, with the LLM kept at the edge.** Ranking is pure functions: stock rules (full size run, 2× depth, not damaged, fixture type, department), then preferences, then visual standards (outfit role, zone palette, color adjacency), then a weighted score. The engine is unit-tested and explainable. The copilot can only change preferences, which narrow or re-weight; it can't loosen a rule, and its propose tool rejects anything outside the engine's current picks.
+- **Fixtures are merchandised as outfits.** Every 3 rail slots form one outfit, and each slot needs a role: top (bra, tank, tee, shirt), bottom (legging, short, jogger, trouser) or cover-up (jacket, long sleeve, hoodie, all outerwear). Women's rails run top → bottom → cover-up, men's run cover-up → top → bottom. Tables take tops and non-outerwear cover-ups on the left half and bottoms on the right; outerwear never goes on a table. Role is its own product metafield, separate from category: a long sleeve is a top by category and a cover-up by role. A wrong-role item is rejected with the slot's rule ("Slot 3 is a cover-up slot (top → bottom → cover-up)"). The sequence already limits each role per fixture, so there is no separate per-category cap.
+- **Score weights: contrast 0.40, velocity 0.35, cover 0.25.** With roles fixed by the slot, the score ranks items that already fit: contrast is the lightness difference from the neighbors, velocity is sales against the fastest seller in the whole category, and cover is weeks of supply in the back, full at 4 weeks. "More contrast" raises contrast to 0.80.
 - **Leniency only when nothing passes.** If no item has stock to refill the slot twice, the engine re-ranks accepting items that fill the size run once, and labels them as fallback picks. A broken run is never offered.
 - **Every write is a proposal.** Nothing touches Shopify until a person approves it. Applying claims the proposal first (no double apply), re-checks preconditions, and writes with compare-and-swap: `metafieldsSet` with `compareDigest` for placements, and `inventoryAdjustQuantities` with `changeFromQuantity` and an `@idempotent` key for corrections. The audit row stores before and after, and undo refuses if anything changed since.
 - **Loose-tag signals that hold up under re-merchandising.** Detection first flagged tags read outside their own zone. That produced false alarms after a real swap moved stock between zones, so "wrong area" now means outside every sales zone and the stockroom. Signals combine as 1 − Π(1 − weight).
@@ -89,10 +91,10 @@ Shopify stays the source of truth for products and counts. The app database hold
 
 | Check | Result |
 | --- | --- |
-| Raw vs adjusted read rate (latest count, 6,214 units on hand) | 96.1% raw, 92.3% adjusted. The raw rate passes the 95% target; the adjusted rate fails it |
-| Planted bra theft (5% of units, tags gone, building up over six weeks) | Bras fall from 95% to 88% across eight counts |
-| Loose-tag detection | 257 planted, 235 flagged, 0 false alarms. The 22 planted tags dropped at their own fixture are not flagged: they look exactly like stock on the floor, which is the limit of scan-only detection |
-| Swap-outs | 7 found; 6 have valid replacements, 1 is blocked by the fixture's color and category mix |
+| Raw vs adjusted read rate (latest count, 6,268 units on hand) | 96.1% raw, 92.3% adjusted. The raw rate passes the 95% target; the adjusted rate fails it |
+| Planted bra theft (5% of units, tags gone, building up over six weeks) | Bras fall from 96% to 89% across eight counts |
+| Loose-tag detection | 259 planted, 237 flagged, 0 false alarms. The 22 planted tags dropped at their own fixture are not flagged: they look exactly like stock on the floor, which is the limit of scan-only detection |
+| Swap-outs | 7 found; 4 have valid replacements. 3 are blocked because every women's top or cover-up in Zone 1's palette that could fill them is already on the floor |
 | Write path | Propose → apply → undo verified against a dev store for both metafield swaps and inventory corrections |
 
 ## What I'd change at scale

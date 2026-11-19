@@ -186,6 +186,7 @@ export async function loadFixture(admin: AdminClient, fixtureId: string) {
     productId: vs[0].productId,
     title: vs[0].productTitle,
     category: vs[0].category,
+    role: vs[0].role,
     department: vs[0].department,
     colorFamily: vs[0].colorFamily,
     fixtureType: vs[0].fixtureType,
