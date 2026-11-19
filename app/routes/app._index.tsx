@@ -6,6 +6,7 @@ import { saveReadRate } from "../lib/summaries.server";
 import { loadDashboard } from "../lib/floor.server";
 import { READ_RATE_TARGET, type RateRow } from "../lib/scans/reconcile";
 import { ReadRateChart } from "../components/ReadRateChart";
+import { cap, pct } from "../lib/format";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -14,7 +15,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return d;
 };
 
-const pct = (r: number | null) => (r === null ? "—" : `${(r * 100).toFixed(1)}%`);
 
 function RateBadge({ row }: { row: RateRow }) {
   return row.belowTarget ? <s-badge tone="critical">Below {pct(READ_RATE_TARGET)}</s-badge> : <s-badge tone="success">On target</s-badge>;
@@ -28,7 +28,7 @@ export default function Dashboard() {
       <s-page heading="Read rate">
         <s-section>
           <s-empty-state heading="No full count yet">
-            <s-paragraph>Upload a weekly full-count scan to compare tag reads against Shopify on-hand.</s-paragraph>
+            <s-paragraph>Upload a weekly full-count scan to compare tag reads against Shopify&apos;s on-hand count.</s-paragraph>
             <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
           </s-empty-state>
         </s-section>
@@ -43,7 +43,7 @@ export default function Dashboard() {
 
       <s-section heading={`Full count · ${d.scan.takenAt.slice(0, 10)}`}>
         <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
-          <Stat label="Raw read rate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on hand`} />
+          <Stat label="Raw read rate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on-hand units read`} />
           <Stat label="Adjusted read rate" value={pct(d.total.adjustedRate)} detail="Excludes suspected loose tags" />
           <Stat label="Hidden shrink" value={`${(gap * 100).toFixed(1)} pts`} detail={`${d.ghostCount} suspected loose tags`} />
           <Stat label="Unknown tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
@@ -64,7 +64,7 @@ export default function Dashboard() {
                   <s-table-header format="numeric">Adjusted</s-table-header>
                   {d.byCategory.map((c) => (
                     <s-table-header key={c.key} format="numeric">
-                      {c.label}
+                      {cap(c.label)}
                     </s-table-header>
                   ))}
                 </s-table-header-row>
@@ -98,7 +98,7 @@ export default function Dashboard() {
           <s-table-body>
             {d.byCategory.map((c) => (
               <s-table-row key={c.key}>
-                <s-table-cell>{c.label}</s-table-cell>
+                <s-table-cell>{cap(c.label)}</s-table-cell>
                 <s-table-cell>{c.expected.toLocaleString()}</s-table-cell>
                 <s-table-cell>{pct(c.rawRate)}</s-table-cell>
                 <s-table-cell>{pct(c.adjustedRate)}</s-table-cell>
@@ -113,7 +113,7 @@ export default function Dashboard() {
 
       <s-section heading={`Short week after week (${d.chronic.length})`}>
         <s-paragraph>
-          SKUs that read fewer tags than Shopify on-hand in each of the last {d.countsCompared} full counts. Likely real shrink: check
+          SKUs that read fewer tags than Shopify&apos;s on-hand count in each of the last {d.countsCompared} full counts. Likely real shrink: check
           and correct the count.
         </s-paragraph>
         {d.chronic.length ? (

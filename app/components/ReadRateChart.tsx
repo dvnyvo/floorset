@@ -2,6 +2,7 @@
 // Inline SVG, because Polaris web components have no chart.
 import { useState } from "react";
 import type { TrendPoint } from "../lib/scans/reconcile";
+import { cap, pct } from "../lib/format";
 
 const W = 720;
 const H = 240;
@@ -11,7 +12,6 @@ const MUTED = "#616161";
 const GRID = "#e3e3e3";
 const SERIES = ["#2a78d6", "#eb6834"]; // fixed order: all items, then the weakest category
 
-const pct = (r: number | null) => (r === null ? "—" : `${(r * 100).toFixed(1)}%`);
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 export function ReadRateChart({ points, target }: { points: TrendPoint[]; target: number }) {
@@ -23,7 +23,7 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
     .sort(([, a], [, b]) => a! - b!)[0]?.[0];
   const series = [
     { name: "All items", color: SERIES[0], values: points.map((p) => p.adjustedRate) },
-    ...(weakest ? [{ name: weakest, color: SERIES[1], values: points.map((p) => p.byCategory[weakest] ?? null) }] : []),
+    ...(weakest ? [{ name: cap(weakest), color: SERIES[1], values: points.map((p) => p.byCategory[weakest] ?? null) }] : []),
   ];
 
   const all = series.flatMap((s) => s.values).filter((v): v is number => v !== null);
@@ -71,7 +71,7 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
         role="img"
-        aria-label={`Adjusted read rate over the last ${points.length} full counts. All items ${pct(last.adjustedRate)}${weakest ? `, ${weakest} ${pct(last.byCategory[weakest])}` : ""}, target ${pct(target)}.`}
+        aria-label={`Adjusted read rate over the last ${points.length} full counts. All items ${pct(last.adjustedRate)}${weakest ? `, ${cap(weakest)} ${pct(last.byCategory[weakest])}` : ""}, target ${pct(target)}.`}
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
         style={{ display: "block", fontFamily: "inherit" }}
