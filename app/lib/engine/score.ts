@@ -1,5 +1,5 @@
 // Stage 3: soft score used to rank candidates that pass every hard rule.
-import { COLORS } from "./colors";
+import { COLORS, type ColorFamily } from "./colors";
 import { SIZES, type Candidate, type EngineConfig, type FixtureContext, type Weights } from "./types";
 import { neighbors } from "./visual";
 
@@ -22,12 +22,25 @@ export function cover(c: Candidate, coverWeeksCap: number): number {
   return Math.min(weeks / coverWeeksCap, 1);
 }
 
-/** Mean tone distance from the neighbors (0.5 when the slot has no neighbors). */
+/** Hue gap 0 to 1: opposite hues 1, a hue against a neutral 0.5, two neutrals 0. */
+function hueGap(a: number | null, b: number | null): number {
+  if (a === null || b === null) return a === b ? 0 : 0.5;
+  const d = Math.abs(a - b) % 360;
+  return Math.min(d, 360 - d) / 180;
+}
+
+/** How far apart two color families look: lightness and hue combined, 0 for the same family, capped at 1. */
+export function colorDistance(a: ColorFamily, b: ColorFamily): number {
+  const x = COLORS[a], y = COLORS[b];
+  return Math.min(1, Math.hypot(x.tone - y.tone, hueGap(x.hue, y.hue)));
+}
+
+/** Mean color distance from the neighbors (0.5 when the slot has no neighbors). */
 export function contrast(c: Candidate, fixture: FixtureContext, slot: number): number {
   const { left, right } = neighbors(fixture, slot);
   const ns = [left, right].filter((n) => n !== null);
   if (!ns.length) return 0.5;
-  return ns.reduce((sum, n) => sum + Math.abs(COLORS[c.colorFamily].tone - COLORS[n.colorFamily].tone), 0) / ns.length;
+  return ns.reduce((sum, n) => sum + colorDistance(c.colorFamily, n.colorFamily), 0) / ns.length;
 }
 
 export function score(
