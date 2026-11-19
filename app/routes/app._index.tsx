@@ -1,5 +1,6 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
+import { useState } from "react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { saveReadRate } from "../lib/summaries.server";
@@ -22,6 +23,7 @@ function RateBadge({ row }: { row: RateRow }) {
 
 export default function Dashboard() {
   const d = useLoaderData<typeof loader>();
+  const [allChronic, setAllChronic] = useState(false);
 
   if (!d.scan) {
     return (
@@ -111,14 +113,14 @@ export default function Dashboard() {
         </s-table>
       </s-section>
 
-      <s-section heading={`Short week after week (${d.chronic.length})`}>
+      <s-section heading={`Short ${d.countsCompared} counts in a row (${d.chronic.length})`}>
         <s-paragraph>
           SKUs that read fewer tags than Shopify&apos;s on-hand count in each of the last {d.countsCompared} full counts. Likely real shrink: check
           and correct the count.
         </s-paragraph>
         {d.chronic.length ? (
           <s-unordered-list>
-            {d.chronic.slice(0, 20).map((r) => (
+            {(allChronic ? d.chronic : d.chronic.slice(0, SHOWN)).map((r) => (
               <s-list-item key={r.key}>
                 {r.label}: {r.adjusted} of {r.expected} read
               </s-list-item>
@@ -126,6 +128,11 @@ export default function Dashboard() {
           </s-unordered-list>
         ) : (
           <s-paragraph>None.</s-paragraph>
+        )}
+        {d.chronic.length > SHOWN && (
+          <s-button variant="tertiary" onClick={() => setAllChronic(!allChronic)}>
+            {allChronic ? `Show first ${SHOWN}` : `Show all (${d.chronic.length})`}
+          </s-button>
         )}
       </s-section>
 
@@ -152,6 +159,8 @@ export default function Dashboard() {
     </s-page>
   );
 }
+
+const SHOWN = 10; // chronic shorts listed before "Show all"
 
 function Stat({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (

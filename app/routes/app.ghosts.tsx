@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
@@ -88,6 +88,7 @@ export default function Ghosts() {
   }, [act.data, shopify]);
 
   // Sweep list: walk one area at a time, most suspicious tags first.
+  const [expanded, setExpanded] = useState<string[]>([]); // sweep areas showing every row
   const areas = new Map<string, typeof d.open>();
   for (const s of d.open) areas.set(s.area ?? "Unknown", [...(areas.get(s.area ?? "Unknown") ?? []), s]);
   const pending = d.corrections.filter((c) => c.status === "pending");
@@ -151,7 +152,7 @@ export default function Ghosts() {
               <s-table-header>What did you find?</s-table-header>
             </s-table-header-row>
             <s-table-body>
-              {rows.map((s) => (
+              {(expanded.includes(area) ? rows : rows.slice(0, SHOWN)).map((s) => (
                 <s-table-row key={s.epc}>
                   <s-table-cell>
                     <s-stack gap="small-300">
@@ -188,6 +189,14 @@ export default function Ghosts() {
               ))}
             </s-table-body>
           </s-table>
+          {rows.length > SHOWN && (
+            <s-button
+              variant="tertiary"
+              onClick={() => setExpanded((e) => (e.includes(area) ? e.filter((a) => a !== area) : [...e, area]))}
+            >
+              {expanded.includes(area) ? `Show first ${SHOWN}` : `Show all (${rows.length})`}
+            </s-button>
+          )}
         </s-section>
       ))}
 
@@ -243,5 +252,7 @@ export default function Ghosts() {
     </s-page>
   );
 }
+
+const SHOWN = 10; // rows per sweep area before "Show all"
 
 export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);
