@@ -193,7 +193,7 @@ describe("closest options when nothing fits", () => {
     expect(r.picks).toEqual([]);
     expect(Object.fromEntries(r.closest.map((c) => [c.candidate.productId, c.label]))).toEqual({
       red: "Fits everything except Zone 2's palette",
-      black: "Fits everything except color adjacency: would put 3 black items in a row",
+      black: "Fits everything except color spacing: black next to black",
     });
   });
 

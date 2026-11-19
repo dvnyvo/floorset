@@ -111,7 +111,7 @@ function rankOnce(
           rule: x.rule,
           label: x.rule === "zone_palette"
             ? `Fits everything except ${fixture.zone.name}'s palette`
-            : `Fits everything except color adjacency: ${x.reason.charAt(0).toLowerCase()}${x.reason.slice(1)}`,
+            : `Fits everything except color spacing: ${x.candidate.colorFamily} next to ${x.candidate.colorFamily}`,
         }))
         .sort((a, b) => b.score - a.score || a.candidate.title.localeCompare(b.candidate.title))
         .slice(0, config.topN);
