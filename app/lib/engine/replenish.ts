@@ -22,7 +22,7 @@ export function replenish(cadence: SizeCounts | undefined, floor: SizeCounts, ba
   }
   const shortSizes = SIZES.filter((s) => short[s]);
   const reason = shortSizes.length
-    ? `Needs ${list(shortSizes.map((s) => `${short[s] + (fill[s] ?? 0)} more ${s}`))}${backNote(shortSizes, back)}`
+    ? `Needs ${list(shortSizes.map((s) => `${short[s]! + (fill[s] ?? 0)} more ${s}`))}${backNote(shortSizes, back)}`
     : Object.keys(fill).length
       ? "Refill from back stock"
       : "Full";
