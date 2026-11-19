@@ -80,6 +80,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     weights: r.weights,
     passedCount: r.passedCount,
     fallback: r.fallback,
+    closest: r.closest.map((c) => ({ productId: c.candidate.productId, title: c.candidate.title, label: c.label })),
     // Already sorted by the engine: visual rejections first, then preference, then stock.
     rejected: r.rejected.map((x) => ({
       productId: x.candidate.productId,
@@ -455,10 +456,28 @@ export default function FixtureView() {
             ))}
           </s-stack>
         ) : (
-          <s-paragraph>
-            Nothing passes every rule with these preferences. See the rejections
-            below.
-          </s-paragraph>
+          <s-stack gap="base">
+            <s-paragraph>
+              Nothing passes every rule with these preferences. See the rejections
+              below.
+            </s-paragraph>
+            {d.closest.length > 0 && (
+              <s-stack gap="small">
+                <s-text type="strong">Closest options</s-text>
+                <s-text color="subdued">
+                  Each breaks exactly one visual rule. Shown for reference only; they cannot be proposed.
+                </s-text>
+                {d.closest.map((c) => (
+                  <s-box key={c.productId} padding="base" border="base" borderRadius="base" background="subdued">
+                    <s-stack gap="small-200">
+                      <s-text type="strong">{c.title}</s-text>
+                      <s-text>{c.label}</s-text>
+                    </s-stack>
+                  </s-box>
+                ))}
+              </s-stack>
+            )}
+          </s-stack>
         )}
       </s-section>
 
