@@ -15,7 +15,8 @@ describe("replenish", () => {
   it("flags a swap-out when back stock can't restore a size", () => {
     const r = replenish(RAIL_CADENCE, { ...RAIL_CADENCE, S: 0 }, { S: 1 });
     expect(r).toMatchObject({ fill: { S: 1 }, short: { S: 2 }, swapOut: true });
-    expect(r.reason).toBe("Needs 2 more S beyond the 1 S in back");
+    expect(r.reason).toBe("Needs 3 more S, only 1 in back");
+    expect(replenish(RAIL_CADENCE, { ...RAIL_CADENCE, S: 0, M: 1 }, { S: 1 }).reason).toBe("Needs 3 more S and 2 more M, only 1 S in back");
   });
 
   it("combines short sizes with nothing in back", () => {

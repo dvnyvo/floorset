@@ -22,7 +22,7 @@ export function replenish(cadence: SizeCounts | undefined, floor: SizeCounts, ba
   }
   const shortSizes = SIZES.filter((s) => short[s]);
   const reason = shortSizes.length
-    ? `Needs ${list(shortSizes.map((s) => `${short[s]} more ${s}`))}${backNote(shortSizes, back)}`
+    ? `Needs ${list(shortSizes.map((s) => `${short[s] + (fill[s] ?? 0)} more ${s}`))}${backNote(shortSizes, back)}`
     : Object.keys(fill).length
       ? "Refill from back stock"
       : "Full";
@@ -32,8 +32,9 @@ export function replenish(cadence: SizeCounts | undefined, floor: SizeCounts, ba
 /** "a", "a and b", "a, b and c". */
 const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs[0]);
 
-/** ", none in back" or " beyond the 1 S in back": what the back could already cover. */
+/** ", none in back", ", only 1 in back" (one size), or ", only 1 S in back" (several sizes). */
 function backNote(sizes: (typeof SIZES)[number][], back: SizeCounts) {
-  const inBack = sizes.filter((s) => (back[s] ?? 0) > 0).map((s) => `${back[s]} ${s}`);
-  return inBack.length ? ` beyond the ${list(inBack)} in back` : ", none in back";
+  const inBack = sizes.filter((s) => (back[s] ?? 0) > 0);
+  if (!inBack.length) return ", none in back";
+  return `, only ${list(inBack.map((s) => (sizes.length === 1 ? `${back[s]}` : `${back[s]} ${s}`)))} in back`;
 }
