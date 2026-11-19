@@ -54,13 +54,18 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<ActionRes
   };
 };
 
+/** Today in the browser's time zone as YYYY-MM-DD (toISOString would give the UTC date). */
+const localDate = () => new Date().toLocaleDateString("en-CA");
+
 export default function Scans() {
   const { scans } = useLoaderData<typeof loader>();
   const upload = useFetcher<typeof action>();
   const remove = useFetcher<typeof action>();
   const shopify = useAppBridge();
   const [type, setType] = useState<string>("full_count");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(localDate());
+  // The server renders in its own time zone; reset to the browser's date once mounted.
+  useEffect(() => setDate(localDate()), []);
   const busy = upload.state !== "idle";
 
   useEffect(() => {

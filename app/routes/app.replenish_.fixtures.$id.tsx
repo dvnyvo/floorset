@@ -17,6 +17,8 @@ import { authenticate } from "../shopify.server";
 import { colorNote, rank } from "../lib/engine/rank";
 import { COLORS, colorsIn } from "../lib/engine/colors";
 import { roleLabel, slotRoles } from "../lib/engine/roles";
+import { outfitRole } from "../lib/engine/visual";
+import { cap } from "../lib/format";
 import type { ColorFamily, FixtureContext, Preferences } from "../lib/engine/types";
 import { loadFixture } from "../lib/floor.server";
 import { CATEGORIES, prefsFromParams, prefsToParams } from "../lib/prefs";
@@ -78,6 +80,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       reason: p.reason,
     })),
     weights: r.weights,
+    // Refine buttons: only categories with an item that can fill this slot's role.
+    categories: CATEGORIES.filter((c) => fx.candidates.some((x) => x.category === c && outfitRole(x, fx.fixture, slot).ok)),
     passedCount: r.passedCount,
     fallback: r.fallback,
     closest: r.closest.map((c) => ({ productId: c.candidate.productId, title: c.candidate.title, label: c.label })),
@@ -162,7 +166,7 @@ function Block({
 }) {
   return (
     <div
-      title={item ? `${item.title} (${item.colorFamily})` : "Empty"}
+      title={item ? `${item.title} (${cap(item.colorFamily)})` : "Empty"}
       style={{
         flex: 1,
         minWidth: 0,
@@ -183,7 +187,7 @@ function Block({
           {/* The style name says the kind ("Long Sleeve"); the category alone would read "top" in a cover-up slot. */}
           {item.title.split(" - ")[0]}
           <br />
-          {item.colorFamily}
+          {cap(item.colorFamily)}
         </>
       ) : (
         "empty"
@@ -219,16 +223,14 @@ function SlotRow({ fixture, render }: { fixture: FixtureContext; render: (i: num
   );
 }
 
-const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-
 const REJECTED_SHOWN = 10;
 const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighter / Brighter buttons
 
 // What each score part measures, worded to match the engine (score.ts).
 const SCORE_PARTS = [
-  ["contrast", "Contrast", "lightness difference from its neighbors"],
+  ["contrast", "Contrast", "how different its color is from its neighbors, in hue and lightness"],
   ["velocity", "Velocity", "sales vs the fastest seller in its category, across the whole catalog"],
-  ["cover", "Cover", "weeks of sales the back stock covers, full at 4"],
+  ["cover", "Cover", "weeks of sales the back stock covers, full at 4+ weeks"],
 ] as const;
 
 const STATUS_TONE = {
@@ -347,8 +349,10 @@ export default function FixtureView() {
             )}
           />
           <s-text color="subdued">
-            {d.fixture.zone.name} palette: {d.fixture.zone.palette.join(", ")} ·{" "}
-            {d.fixture.slots[d.slot]?.title ?? "Empty slot"}
+            {d.fixture.zone.name} palette: {d.fixture.zone.palette.join(", ")}
+          </s-text>
+          <s-text color="subdued">
+            Swapping out: {d.fixture.slots[d.slot]?.title ?? "empty slot"}
           </s-text>
         </s-stack>
       </s-section>
@@ -362,13 +366,13 @@ export default function FixtureView() {
             >
               Any category
             </s-button>
-            {CATEGORIES.map((c) => (
+            {d.categories.map((c) => (
               <s-button
                 key={c}
                 href={link({ ...d.prefs, category: c })}
                 variant={d.prefs.category === c ? "primary" : "secondary"}
               >
-                {c}
+                {cap(c)}
               </s-button>
             ))}
           </s-stack>
@@ -403,7 +407,7 @@ export default function FixtureView() {
       </s-section>
 
       <s-section
-        heading={d.fallback ? `Fallback picks (${d.passedCount})` : `Top picks (${d.passedCount} pass every rule)`}
+        heading={d.fallback ? `Fallback picks (${d.passedCount})` : !d.passedCount ? "No item passes every rule" : `Top picks (${d.passedCount} ${d.passedCount === 1 ? "pick passes" : "picks pass"} every rule)`}
       >
         {d.fallback && (
           <s-banner tone="warning">
@@ -458,8 +462,8 @@ export default function FixtureView() {
         ) : (
           <s-stack gap="base">
             <s-paragraph>
-              Nothing passes every rule with these preferences. See the rejections
-              below.
+              Nothing passes every rule{d.prefs.category || d.prefs.colorFamilies?.length ? " with these preferences" : ""}. See the
+              rejections below.
             </s-paragraph>
             {d.closest.length > 0 && (
               <s-stack gap="small">
