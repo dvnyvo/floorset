@@ -66,6 +66,7 @@ function productInput(p: SeedProduct, locationId: string, qty: Map<string, numbe
       metafields: [
         meta("color_family", p.colorFamily),
         meta("category", p.category),
+        meta("role", p.role),
         meta("fixture_type", p.fixtureType),
         meta("department", p.department),
       ],
