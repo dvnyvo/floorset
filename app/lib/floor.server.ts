@@ -76,7 +76,8 @@ export async function loadDashboard(admin: AdminClient) {
     scan: { id: counts[0].id, takenAt: counts[0].takenAt.toISOString(), reads: counts[0].tagReads.length },
     countsCompared: counts.length,
     total: latest.total,
-    byCategory: latest.byCategory,
+    // Weakest first, so the category dragging the rate down leads the table.
+    byCategory: [...latest.byCategory].sort((a, b) => (a.adjustedRate ?? 1) - (b.adjustedRate ?? 1)),
     flaggedSkus: worst(latest.bySku).slice(0, 25),
     flaggedSkuCount: worst(latest.bySku).length,
     chronic: chronicShorts(perCount.map((p) => p.bySku)).map((k) => label.get(k)!),
