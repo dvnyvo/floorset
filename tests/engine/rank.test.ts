@@ -175,3 +175,49 @@ describe("colorNote", () => {
     expect(colorNote(["cream", "grey"], zone2, false, "light")).toBeNull();
   });
 });
+
+describe("closest options when nothing fits", () => {
+  // Bottom slot between a black top and a black jacket; Zone 2 palette here is grey, white, black.
+  const nearMisses = [
+    candidate({ productId: "red", title: "Red Legging", colorFamily: "red", weeklyVelocity: 6 }), // palette only
+    candidate({ productId: "black", title: "Black Legging", colorFamily: "black", weeklyVelocity: 9 }), // adjacency only
+  ];
+  const never = [
+    candidate({ productId: "top", title: "White Top", category: "top", colorFamily: "white" }), // wrong role for the slot
+    candidate({ productId: "broken", title: "Broken", colorFamily: "red", back: { ...deepBack(), S: 0 } }), // stock rule
+    candidate({ productId: "placed", title: "Placed", colorFamily: "red", placed: true }), // stock rule
+  ];
+  const r = rank({ fixture, slot: 1, candidates: [...nearMisses, ...never], cadenceFor });
+
+  it("lists items that break exactly one palette or adjacency rule, labeled with that rule", () => {
+    expect(r.picks).toEqual([]);
+    expect(Object.fromEntries(r.closest.map((c) => [c.candidate.productId, c.label]))).toEqual({
+      red: "Fits everything except Zone 2's palette",
+      black: "Fits everything except color adjacency: would put 3 black items in a row",
+    });
+  });
+
+  it("never relaxes a stock rule or the slot's role", () => {
+    const ids = r.closest.map((c) => c.candidate.productId);
+    for (const id of ["top", "broken", "placed"]) expect(ids).not.toContain(id);
+  });
+
+  it("leaves out items that break both the palette and adjacency", () => {
+    const greyOnly = rail([item("red", "top", "T0"), null, item("grey", "outerwear", "J1")], ["grey", "white"]);
+    const both = candidate({ productId: "red-legging", colorFamily: "red" }); // off palette and next to red
+    expect(rank({ fixture: greyOnly, slot: 1, candidates: [both], cadenceFor }).closest).toEqual([]);
+  });
+
+  it("shows at most topN, best score first", () => {
+    const many = ["red", "blue", "pink", "olive", "navy"].map((c, i) =>
+      candidate({ productId: c, title: c, colorFamily: c as ColorFamily, weeklyVelocity: i + 1 }),
+    );
+    const closest = rank({ fixture, slot: 1, candidates: many, cadenceFor }).closest;
+    expect(closest).toHaveLength(3);
+    expect(closest.map((c) => c.score)).toEqual([...closest.map((c) => c.score)].sort((a, b) => b - a));
+  });
+
+  it("is empty when a valid pick exists", () => {
+    expect(rank({ fixture, slot: 1, candidates: pool, cadenceFor }).closest).toEqual([]);
+  });
+});

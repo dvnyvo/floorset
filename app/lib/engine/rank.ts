@@ -20,6 +20,13 @@ export interface Rejection {
   rule: string;
   reason: string;
 }
+/** An item that fails exactly one visual rule (palette or adjacency). Shown for reference only; never proposable. */
+export interface Closest {
+  candidate: Candidate;
+  score: number;
+  rule: string;
+  label: string; // "Fits everything except Zone 1's palette"
+}
 export interface RankInput {
   fixture: FixtureContext;
   slot: number;
@@ -39,6 +46,9 @@ export function rank(input: RankInput) {
   const lenient = rankOnce(input, true);
   return lenient.picks.length ? lenient : strict;
 }
+
+// Visual rules a closest option may break. Stock, preference and the slot's role are never relaxed.
+const NEAR_MISS_RULES = ["zone_palette", "adjacency"];
 
 function rankOnce(
   { fixture, slot, candidates, cadenceFor, prefs = {}, config = defaultConfig }: RankInput,
@@ -90,7 +100,23 @@ function rankOnce(
   const order: Record<Stage, number> = { visual: 0, preference: 1, stock: 2 };
   rejected.sort((a, b) => order[a.stage] - order[b.stage] || b.candidate.weeklyVelocity - a.candidate.weeklyVelocity);
 
-  return { picks, rejected, passedCount: passed.length, fallback, weights };
+  // Nothing fits: offer up to topN items that break only one palette or adjacency rule, for reference.
+  const closest: Closest[] = picks.length
+    ? []
+    : rejected
+        .filter((x) => NEAR_MISS_RULES.includes(x.rule) && (x.rule === "adjacency" || colorAdjacency(x.candidate, fixture, slot).ok))
+        .map((x) => ({
+          candidate: x.candidate,
+          score: score(x.candidate, candidates, fixture, slot, config, weights).total,
+          rule: x.rule,
+          label: x.rule === "zone_palette"
+            ? `Fits everything except ${fixture.zone.name}'s palette`
+            : `Fits everything except color adjacency: ${x.reason.charAt(0).toLowerCase()}${x.reason.slice(1)}`,
+        }))
+        .sort((a, b) => b.score - a.score || a.candidate.title.localeCompare(b.candidate.title))
+        .slice(0, config.topN);
+
+  return { picks, rejected, passedCount: passed.length, fallback, weights, closest };
 }
 
 function preferenceCategory(c: Candidate, prefs: Preferences): RuleResult {
