@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -16,7 +16,8 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { colorNote, rank } from "../lib/engine/rank";
 import { COLORS, colorsIn } from "../lib/engine/colors";
-import type { ColorFamily, Preferences } from "../lib/engine/types";
+import { roleLabel, slotRoles } from "../lib/engine/roles";
+import type { ColorFamily, FixtureContext, Preferences } from "../lib/engine/types";
 import { loadFixture } from "../lib/floor.server";
 import { CATEGORIES, prefsFromParams, prefsToParams } from "../lib/prefs";
 import {
@@ -178,7 +179,8 @@ function Block({
     >
       {item ? (
         <>
-          {item.category}
+          {/* The style name says the kind ("Long Sleeve"); the category alone would read "top" in a cover-up slot. */}
+          {item.title.split(" - ")[0]}
           <br />
           {item.colorFamily}
         </>
@@ -188,6 +190,35 @@ function Block({
     </div>
   );
 }
+
+/**
+ * Slots grouped the way the floor is merchandised: a gap between outfits (every 3 rail slots), a divider
+ * between a table's tops and bottoms. Each slot is labelled with the role it needs.
+ */
+function SlotRow({ fixture, render }: { fixture: FixtureContext; render: (i: number) => ReactNode }) {
+  const roles = slotRoles(fixture.type, fixture.zone.department, fixture.slots.length);
+  const tableSplit = Math.ceil(roles.length / 2);
+  return (
+    <div style={{ display: "flex", gap: 8 }}>
+      {roles.map((role, i) => (
+        <Fragment key={i}>
+          {fixture.type === "rail" && i > 0 && i % 3 === 0 && <div aria-hidden style={{ width: 8, flexShrink: 0 }} />}
+          {fixture.type === "table" && i === tableSplit && (
+            <div aria-hidden style={{ flexShrink: 0, borderLeft: "2px dashed #8c9196", margin: "0 4px" }} />
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: "#616161", textAlign: "center", marginBottom: 4, overflowWrap: "anywhere" }}>
+              {cap(roleLabel(role))}
+            </div>
+            {render(i)}
+          </div>
+        </Fragment>
+      ))}
+    </div>
+  );
+}
+
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 const REJECTED_SHOWN = 10;
 const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighter / Brighter buttons
@@ -285,32 +316,35 @@ export default function FixtureView() {
         <s-stack gap="small">
           <s-text type="strong">Before · {d.fixture.name}</s-text>
           <s-text color="subdued">Click a slot to find a replacement for it.</s-text>
-          <div style={{ display: "flex", gap: 8 }}>
-            {d.fixture.slots.map((s, i) => (
+          <SlotRow
+            fixture={d.fixture}
+            render={(i) => (
               <a
-                key={i}
                 href={link(d.prefs, i)}
-                style={{ flex: 1, minWidth: 0, textDecoration: "none" }}
+                style={{ display: "flex", textDecoration: "none" }}
                 onClick={(e) => {
                   e.preventDefault();
                   navigate(link(d.prefs, i));
                 }}
               >
-                <Block item={s} highlight={i === d.slot} />
+                <Block item={d.fixture.slots[i]} highlight={i === d.slot} />
               </a>
-            ))}
-          </div>
+            )}
+          />
           <s-text type="strong">After · {d.fixture.name}</s-text>
           <s-text color="subdued">
             {top
               ? `With the top pick, ${top.title}${d.fallback ? " (fills the size run once, no back-up stock)" : ""}`
               : "No item passes every rule for this slot, so nothing changes."}
           </s-text>
-          <div style={{ display: "flex", gap: 8 }}>
-            {after.map((s, i) => (
-              <Block key={i} item={s} highlight={i === d.slot} />
-            ))}
-          </div>
+          <SlotRow
+            fixture={d.fixture}
+            render={(i) => (
+              <div style={{ display: "flex" }}>
+                <Block item={after[i]} highlight={i === d.slot} />
+              </div>
+            )}
+          />
           <s-text color="subdued">
             {d.fixture.zone.name} palette: {d.fixture.zone.palette.join(", ")} ·{" "}
             {d.fixture.slots[d.slot]?.title ?? "Empty slot"}
