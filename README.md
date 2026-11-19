@@ -122,7 +122,7 @@ Requires Node 22.12+, the Shopify CLI, a Partner account and a development store
 ```sh
 npm install
 npm run dev                                   # shopify app dev; install the app on your dev store
-npm run seed -- <store>.myshopify.com         # 150 products, inventory, layout, RFID units, sales
+npm run seed -- <store>.myshopify.com         # 163 products, inventory, layout, RFID units, sales
 npm run gen-scans                             # writes scans/*.csv (8 weekly counts, 4 floor scans)
 ```
 
