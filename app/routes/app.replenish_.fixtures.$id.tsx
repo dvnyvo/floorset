@@ -17,6 +17,7 @@ import { authenticate } from "../shopify.server";
 import { colorNote, rank } from "../lib/engine/rank";
 import { COLORS, colorsIn } from "../lib/engine/colors";
 import { roleLabel, slotRoles } from "../lib/engine/roles";
+import { outfitRole } from "../lib/engine/visual";
 import { cap } from "../lib/format";
 import type { ColorFamily, FixtureContext, Preferences } from "../lib/engine/types";
 import { loadFixture } from "../lib/floor.server";
@@ -79,6 +80,8 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       reason: p.reason,
     })),
     weights: r.weights,
+    // Refine buttons: only categories with an item that can fill this slot's role.
+    categories: CATEGORIES.filter((c) => fx.candidates.some((x) => x.category === c && outfitRole(x, fx.fixture, slot).ok)),
     passedCount: r.passedCount,
     fallback: r.fallback,
     closest: r.closest.map((c) => ({ productId: c.candidate.productId, title: c.candidate.title, label: c.label })),
@@ -363,7 +366,7 @@ export default function FixtureView() {
             >
               Any category
             </s-button>
-            {CATEGORIES.map((c) => (
+            {d.categories.map((c) => (
               <s-button
                 key={c}
                 href={link({ ...d.prefs, category: c })}
