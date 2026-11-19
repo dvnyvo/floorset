@@ -103,9 +103,20 @@ const RAIL_CADENCE: Record<Size, number> = { XXS: 1, XS: 2, S: 3, M: 3, L: 2, XL
 const TABLE_CADENCE: Record<Size, number> = { XXS: 1, XS: 2, S: 2, M: 2, L: 2, XL: 1 };
 const OUTERWEAR_CADENCE: Record<Size, number> = { XXS: 1, XS: 1, S: 2, M: 2, L: 2, XL: 1 };
 
+// Styles added after the original 50, appended so the originals keep their colorways.
+// Fill styles give the outfit layout enough tops to complete every fixture. Bench styles stay off the starting
+// layout so Zone 1's swap-outs have replacements.
+const EXTRA_STYLES: { name: string; department: Department; category: Category; kind?: string; families: ColorFamily[]; bench?: boolean }[] = [
+  { name: "Aster", department: "womens", category: "top", kind: "Tank", families: ["white", "red", "blue"] },
+  { name: "Bloom", department: "womens", category: "top", families: ["navy", "grey", "olive"] },
+  { name: "Cobble", department: "mens", category: "top", families: ["black", "navy", "olive"] },
+  { name: "Halo", department: "womens", category: "top", kind: "Long Sleeve", families: ["grey", "navy", "white"], bench: true },
+  { name: "Rook", department: "womens", category: "top", kind: "Tank", families: ["black"], bench: true },
+];
+
 const BROKEN_RUN_SLOTS: [string, number][] = [
   ["Zone 4 Table 1", 0], ["Zone 1 Table 1", 1], ["Zone 1 Rail 2", 1], ["Zone 2 Rail 1", 0],
-  ["Zone 1 Table 1", 0], ["Men's Table 1", 2], ["Zone 1 Rail 1", 3], ["Zone 2 Rail 2", 4],
+  ["Zone 1 Table 1", 0], ["Zone 1 Rail 1", 1], ["Zone 1 Rail 1", 3], ["Zone 2 Rail 2", 4],
 ];
 export const SEED_DATE = "2026-11-15";
 const SALES_DAYS = 56;
@@ -125,37 +136,45 @@ export function generate(seed = 42): SeedData {
     return a;
   };
 
-  // --- Catalog: 50 styles x 3 colorways = 150 products, XXS-XL each ---
+  // --- Catalog: 50 styles x 3 colorways = 150 products, then the extra styles below, XXS-XL each ---
   // [category, label]: the label names the product kind, which sets its outfit role.
   const womensCats: [Category, string?][] = [["legging"], ["legging"], ["bra"], ["top"], ["top", "Long Sleeve"], ["outerwear"], ["short"]];
   const mensCats: [Category, string?][] = [["top"], ["short"], ["jogger"], ["outerwear"]];
   const products: SeedProduct[] = [];
+  const addProduct = (name: string, styleIndex: number, department: Department, category: Category, kind: string | undefined, family: ColorFamily) => {
+    const styleNo = String(1000 + styleIndex * 7);
+    const colorName = pick(COLORS[family]);
+    const c = CATEGORY[category];
+    const label = kind ?? c.label;
+    const product: SeedProduct = {
+      handle: slug(`${name} ${department === "mens" ? "mens " : ""}${label} ${colorName}`),
+      title: `${name} ${department === "mens" ? "Men's " : ""}${label} - ${colorName}`,
+      styleNo,
+      category,
+      role: roleOf(label)!,
+      department,
+      colorName,
+      colorFamily: family,
+      fixtureType: c.fixture,
+      price: c.price,
+      skus: Object.fromEntries(SIZES.map((s) => [s, `FS-${styleNo}-${slug(colorName).toUpperCase().slice(0, 4)}-${s}`])) as Record<Size, string>,
+    };
+    products.push(product);
+    return product;
+  };
+  const addExtras = (bench: boolean) =>
+    EXTRA_STYLES.forEach((x, k) => {
+      if (Boolean(x.bench) === bench) for (const f of x.families) addProduct(x.name, STYLE_NAMES.length + k, x.department, x.category, x.kind, f);
+    });
   STYLE_NAMES.forEach((name, i) => {
     const department: Department = i < 38 ? "womens" : "mens";
     const [category, kind] = department === "womens" ? womensCats[i % womensCats.length] : mensCats[i % mensCats.length];
-    const styleNo = String(1000 + i * 7);
     // Men's colorways lean on their zone's palette so the department has candidates.
     const familyPool = department === "mens" ? (["black", "navy", "grey", "olive", "espresso", "blue"] as ColorFamily[]) : FAMILIES;
-    for (const family of shuffle([...familyPool]).slice(0, 3)) {
-      const colorName = pick(COLORS[family]);
-      const c = CATEGORY[category];
-      const label = kind ?? c.label;
-      const handle = slug(`${name} ${department === "mens" ? "mens " : ""}${label} ${colorName}`);
-      products.push({
-        handle,
-        title: `${name} ${department === "mens" ? "Men's " : ""}${label} - ${colorName}`,
-        styleNo,
-        category,
-        role: roleOf(label)!,
-        department,
-        colorName,
-        colorFamily: family,
-        fixtureType: c.fixture,
-        price: c.price,
-        skus: Object.fromEntries(SIZES.map((s) => [s, `FS-${styleNo}-${slug(colorName).toUpperCase().slice(0, 4)}-${s}`])) as Record<Size, string>,
-      });
-    }
+    for (const family of shuffle([...familyPool]).slice(0, 3)) addProduct(name, i, department, category, kind, family);
   });
+
+  addExtras(false);
 
   // --- Layout: per zone 2 rails (5 slots) + 2 tables (3 slots) ---
   const fixtures: SeedFixture[] = ZONES.flatMap((z) => [
@@ -209,6 +228,10 @@ export function generate(seed = 42): SeedData {
     }
   }
 
+  // Bench styles join the catalog after the layout, so none of them start on the floor.
+  addExtras(true);
+  const bench = new Set(products.filter((p) => EXTRA_STYLES.some((x) => x.bench && p.title.startsWith(`${x.name} `))).map((p) => p.handle));
+
   // --- Stock: RFID units per variant ---
   let epcCounter = 0;
   const nextEpc = () => "3034" + (++epcCounter).toString(16).toUpperCase().padStart(20, "0");
@@ -217,8 +240,8 @@ export function generate(seed = 42): SeedData {
     for (let i = 0; i < n; i++) units.push({ epc: nextEpc(), sku, area, status });
   };
 
-  // Planted: 8 placed products whose back stock ran out in 1-2 sizes -> swap-outs. Fixed slots, so the demo's
-  // swap-outs stay where they were before the outfit layout.
+  // Planted: 8 placed products whose back stock ran out in 1-2 sizes -> swap-outs, at fixed slots. Zone 1 Rail 1
+  // slot 2 is the deliberate dead end: no unplaced bottom in Zone 1's palette fits between its neighbors.
   const brokenRuns = BROKEN_RUN_SLOTS.map(([fixture, slot]) => placements.find((p) => p.fixture === fixture && p.slot === slot)!.handle);
   for (const p of products) {
     const ft = placedOn.get(p.handle);
@@ -229,6 +252,9 @@ export function generate(seed = 42): SeedData {
         const broken = brokenRuns.includes(p.handle) && (size === "S" || (size === "M" && r() < 0.5));
         addUnits(sku, broken ? Math.max(0, cadence - 2) : cadence, "floor");
         addUnits(sku, broken ? 0 : Math.round(cadence * (1.5 + r() * 2.5)), "back");
+      } else if (bench.has(p.handle)) {
+        // Bench styles: full size run with at least 2x the deepest cadence in back.
+        addUnits(sku, Math.round(RAIL_CADENCE[size] * (2 + r())), "back");
       } else {
         // Unplaced styles are the bench a swap draws from: mostly deep back stock, some with natural size gaps.
         const n = r() < 0.08 ? 0 : Math.round(SIZE_CURVE[size] * (4 + r() * 10));
@@ -276,13 +302,13 @@ function selfCheck(d: SeedData) {
   const assert = (ok: unknown, msg: string) => {
     if (!ok) throw new Error(`seed self-check failed: ${msg}`);
   };
-  assert(d.products.length === 150, "150 products");
+  assert(d.products.length === 150 + EXTRA_STYLES.reduce((n, x) => n + x.families.length, 0), "150 products plus the extra styles");
+  assert(d.placements.length === d.fixtures.reduce((n, f) => n + f.slotCount, 0), `every slot filled (${d.placements.length})`);
   assert(new Set(d.products.map((p) => p.handle)).size === d.products.length, "unique handles");
   const skus = d.products.flatMap((p) => Object.values(p.skus));
   assert(new Set(skus).size === skus.length, "unique SKUs");
   assert(new Set(d.units.map((u) => u.epc)).size === d.units.length, "unique EPCs");
   assert(d.planted.brokenRuns.every(Boolean) && d.planted.brokenRuns.length === 8, "8 planted broken runs");
-  assert(d.placements.length >= 70, `most slots filled (${d.placements.length})`);
   for (const pl of d.placements) {
     const f = d.fixtures.find((x) => x.name === pl.fixture)!;
     const z = d.zones.find((x) => x.name === f.zone)!;
