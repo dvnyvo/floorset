@@ -1,4 +1,5 @@
-// Read rate over time: all items against the weakest category, with the target line.
+// Read rate over time: all items against the weakest category, with the target line and the other
+// categories as grey context lines.
 // Inline SVG, because Polaris web components have no chart.
 import { useState } from "react";
 import type { TrendPoint } from "../lib/scans/reconcile";
@@ -11,6 +12,7 @@ const INK = "#303030";
 const MUTED = "#616161";
 const GRID = "#e3e3e3";
 const SERIES = ["#2a78d6", "#eb6834"]; // fixed order: all items, then the weakest category
+const CONTEXT = "#c4c4c4"; // the other categories, behind the highlighted series
 
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -25,8 +27,11 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
     { name: "All items", color: SERIES[0], values: points.map((p) => p.adjustedRate) },
     ...(weakest ? [{ name: cap(weakest), color: SERIES[1], values: points.map((p) => p.byCategory[weakest] ?? null) }] : []),
   ];
+  const others = Object.keys(last.byCategory)
+    .filter((k) => k !== weakest)
+    .map((k) => ({ name: cap(k), values: points.map((p) => p.byCategory[k] ?? null) }));
 
-  const all = series.flatMap((s) => s.values).filter((v): v is number => v !== null);
+  const all = [...series, ...others].flatMap((s) => s.values).filter((v): v is number => v !== null);
   const lo = Math.floor(Math.min(target, ...all) * 100 - 1) / 100;
   const step = 1 - lo > 0.1 ? 0.05 : 0.02;
   const ticks: number[] = [];
@@ -86,7 +91,7 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
         ))}
         <line x1={M.left} x2={W - M.right} y1={y(target)} y2={y(target)} stroke={MUTED} strokeWidth={1} />
         <text x={M.left + 4} y={y(target) - 5} fill={MUTED} fontSize={11}>
-          Target {Math.round(target * 100)}%
+          Target {pct(target)}
         </text>
         {points.map((p, i) =>
           i % every === 0 || i === points.length - 1 ? (
@@ -95,6 +100,11 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
             </text>
           ) : null,
         )}
+        {others.map((s) => (
+          <path key={s.name} d={path(s.values)} fill="none" stroke={CONTEXT} strokeWidth={1} strokeLinejoin="round" strokeLinecap="round">
+            <title>{s.name}</title>
+          </path>
+        ))}
         {hover !== null && <line x1={x(hover)} x2={x(hover)} y1={M.top} y2={H - M.bottom} stroke={MUTED} strokeWidth={1} />}
         {series.map((s) => (
           <g key={s.name}>
@@ -112,6 +122,11 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
           </text>
         ))}
       </svg>
+      {weakest && (
+        <div style={{ color: MUTED, marginTop: 4 }}>
+          {cap(weakest)} is the weakest category on the latest count{others.length ? "; other categories in grey" : ""}.
+        </div>
+      )}
       {hover !== null && (
         <div
           style={{
