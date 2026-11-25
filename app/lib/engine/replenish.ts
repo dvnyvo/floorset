@@ -24,7 +24,7 @@ export function replenish(cadence: SizeCounts | undefined, floor: SizeCounts, ba
   const reason = shortSizes.length
     ? `Needs ${list(shortSizes.map((s) => `${short[s]! + (fill[s] ?? 0)} more ${s}`))}${backNote(shortSizes, back)}`
     : Object.keys(fill).length
-      ? "Refill from back stock"
+      ? "Refill from backstock"
       : "Full";
   return { fill, short, swapOut: shortSizes.length > 0, reason };
 }
@@ -32,9 +32,9 @@ export function replenish(cadence: SizeCounts | undefined, floor: SizeCounts, ba
 /** "a", "a and b", "a, b and c". */
 const list = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}` : xs[0]);
 
-/** ", none in back", ", only 1 in back" (one size), or ", only 1 S in back" (several sizes). */
+/** ", none in backstock", ", only 1 in backstock" (one size), or ", only 1 S in backstock" (several sizes). */
 function backNote(sizes: (typeof SIZES)[number][], back: SizeCounts) {
   const inBack = sizes.filter((s) => (back[s] ?? 0) > 0);
-  if (!inBack.length) return ", none in back";
-  return `, only ${list(inBack.map((s) => (sizes.length === 1 ? `${back[s]}` : `${back[s]} ${s}`)))} in back`;
+  if (!inBack.length) return ", none in backstock";
+  return `, only ${list(inBack.map((s) => (sizes.length === 1 ? `${back[s]}` : `${back[s]} ${s}`)))} in backstock`;
 }

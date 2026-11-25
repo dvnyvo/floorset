@@ -29,8 +29,8 @@ export default function Dashboard() {
     return (
       <s-page heading="Read rate">
         <s-section>
-          <s-empty-state heading="No full count yet">
-            <s-paragraph>Upload a weekly full-count scan to compare tag reads against Shopify&apos;s on-hand count.</s-paragraph>
+          <s-empty-state heading="No inventory scan yet">
+            <s-paragraph>Upload a weekly inventory scan to compare RFID-encoded tag reads against Shopify&apos;s on-hand count.</s-paragraph>
             <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
           </s-empty-state>
         </s-section>
@@ -43,25 +43,25 @@ export default function Dashboard() {
     <s-page heading="Read rate">
       <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
 
-      <s-section heading={`Full count · ${d.scan.takenAt.slice(0, 10)}`}>
+      <s-section heading={`Inventory scan · ${d.scan.takenAt.slice(0, 10)}`}>
         <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
           <Stat label="Raw read rate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on-hand units read`} />
           <Stat label="Adjusted read rate" value={pct(d.total.adjustedRate)} detail="Excludes suspected loose tags" />
           <Stat label="Hidden shrink" value={`${(gap * 100).toFixed(1)} pts`} detail={`${d.ghostCount} suspected loose tags`} />
-          <Stat label="Unknown tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
+          <Stat label="Unknown RFID tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
         </s-grid>
       </s-section>
 
       {d.trend.length > 1 && (
         <s-section heading="Read rate over time">
           <s-stack direction="block" gap="base">
-            <s-paragraph>Adjusted read rate at each full count, measured against on-hand at the time.</s-paragraph>
+            <s-paragraph>Adjusted read rate at each inventory scan, measured against on-hand at the time.</s-paragraph>
             <ReadRateChart points={d.trend} target={READ_RATE_TARGET} />
             <details>
               <summary>Show as a table</summary>
               <s-table>
                 <s-table-header-row>
-                  <s-table-header listSlot="primary">Full count</s-table-header>
+                  <s-table-header listSlot="primary">Inventory scan</s-table-header>
                   <s-table-header format="numeric">Raw</s-table-header>
                   <s-table-header format="numeric">Adjusted</s-table-header>
                   {d.byCategory.map((c) => (
@@ -113,9 +113,9 @@ export default function Dashboard() {
         </s-table>
       </s-section>
 
-      <s-section heading={`Short ${d.countsCompared} counts in a row (${d.chronic.length})`}>
+      <s-section heading={`Short ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}>
         <s-paragraph>
-          SKUs that read fewer tags than Shopify&apos;s on-hand count in each of the last {d.countsCompared} full counts. Likely real shrink: check
+          SKUs that read fewer RFID-encoded tags than Shopify&apos;s on-hand count in each of the last {d.countsCompared} inventory scans. Likely real shrink: check
           and correct the count.
         </s-paragraph>
         {d.chronic.length ? (

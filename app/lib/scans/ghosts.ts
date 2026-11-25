@@ -2,7 +2,7 @@
 // because the read rate still counts it. Pure function over scan history; no DB or Shopify here.
 
 export const SIGNALS = {
-  sold_but_read: { weight: 0.9, label: "Sold, but the tag still reads" },
+  sold_but_read: { weight: 0.9, label: "Sold, but the RFID tag still reads" },
   wrong_area: { weight: 0.4, label: "Read outside the sales floor and stockroom" },
   never_moves: { weight: 0.6, label: "Same off-floor spot in 3+ scans" },
   read_but_not_found: { weight: 0.5, label: "Staff searched the spot and found nothing" },

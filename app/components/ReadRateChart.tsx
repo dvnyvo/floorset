@@ -76,7 +76,7 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
         viewBox={`0 0 ${W} ${H}`}
         width="100%"
         role="img"
-        aria-label={`Adjusted read rate over the last ${points.length} full counts. All items ${pct(last.adjustedRate)}${weakest ? `, ${cap(weakest)} ${pct(last.byCategory[weakest])}` : ""}, target ${pct(target)}.`}
+        aria-label={`Adjusted read rate over the last ${points.length} inventory scans. All items ${pct(last.adjustedRate)}${weakest ? `, ${cap(weakest)} ${pct(last.byCategory[weakest])}` : ""}, target ${pct(target)}.`}
         onMouseMove={onMove}
         onMouseLeave={() => setHover(null)}
         style={{ display: "block", fontFamily: "inherit" }}
@@ -124,7 +124,7 @@ export function ReadRateChart({ points, target }: { points: TrendPoint[]; target
       </svg>
       {weakest && (
         <div style={{ color: MUTED, marginTop: 4 }}>
-          {cap(weakest)} is the weakest category on the latest count{others.length ? "; other categories in grey" : ""}.
+          {cap(weakest)} is the weakest category on the latest inventory scan{others.length ? "; other categories in grey" : ""}.
         </div>
       )}
       {hover !== null && (

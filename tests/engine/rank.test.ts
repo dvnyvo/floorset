@@ -39,7 +39,7 @@ describe("rank", () => {
   it("writes a one-line reason for each pick", () => {
     const pick = result.picks.find((p) => p.candidate.productId === "white-legging")!;
     expect(pick.reason).toBe(
-      "Full XXS–XL run, 60 in back, fits Zone 2 palette, breaks up two blacks, 6.0 sold/week, #2 of 6 leggings by sales",
+      "Full XXS–XL run, 60 in backstock, fits Zone 2 palette, breaks up two blacks, 6.0 sold/week, #2 of 6 leggings by sales",
     );
   });
 

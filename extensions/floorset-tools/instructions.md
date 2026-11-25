@@ -4,7 +4,7 @@ Floorset reconciles RFID scans against Shopify inventory for a physical store. U
 
 - RFID read rate, inventory accuracy, shrink, or which categories or SKUs are short: `get_read_rate`
 - What needs replacing or refilling on the sales floor, broken size runs, or fixtures: `list_swap_outs`
-- Loose or "ghost" tags, tags in the fitting room, or hidden shrink: `list_loose_tags`
+- Loose or "ghost" tags, RFID-encoded tags in the fitting room, or hidden shrink: `list_loose_tags`
 
 ## Guidelines
 

@@ -176,7 +176,7 @@ const correctionHandler: Handler = {
     const payload = p.payload as unknown as CorrectionPayload;
     const diff = p.diff as unknown as CorrectionDiff;
     const unit = await db.unit.findUnique({ where: { epc: payload.epc } });
-    if (!unit) throw new ProposalError("That tag is no longer in the system");
+    if (!unit) throw new ProposalError("That RFID tag is no longer in the system");
     if (unit.status === "missing") throw new ProposalError("This unit was already written off");
     const locationId = await primaryLocationId(admin);
     const available = await readAvailable(admin, payload.inventoryItemId, locationId);

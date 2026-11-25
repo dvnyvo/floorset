@@ -9,19 +9,19 @@ describe("replenish", () => {
 
   it("refills from back stock", () => {
     const r = replenish(RAIL_CADENCE, { ...RAIL_CADENCE, S: 1, M: 2 }, { S: 5, M: 5 });
-    expect(r).toMatchObject({ fill: { S: 2, M: 1 }, short: {}, swapOut: false, reason: "Refill from back stock" });
+    expect(r).toMatchObject({ fill: { S: 2, M: 1 }, short: {}, swapOut: false, reason: "Refill from backstock" });
   });
 
   it("flags a swap-out when back stock can't restore a size", () => {
     const r = replenish(RAIL_CADENCE, { ...RAIL_CADENCE, S: 0 }, { S: 1 });
     expect(r).toMatchObject({ fill: { S: 1 }, short: { S: 2 }, swapOut: true });
-    expect(r.reason).toBe("Needs 3 more S, only 1 in back");
-    expect(replenish(RAIL_CADENCE, { ...RAIL_CADENCE, S: 0, M: 1 }, { S: 1 }).reason).toBe("Needs 3 more S and 2 more M, only 1 S in back");
+    expect(r.reason).toBe("Needs 3 more S, only 1 in backstock");
+    expect(replenish(RAIL_CADENCE, { ...RAIL_CADENCE, S: 0, M: 1 }, { S: 1 }).reason).toBe("Needs 3 more S and 2 more M, only 1 S in backstock");
   });
 
   it("combines short sizes with nothing in back", () => {
     const r = replenish(RAIL_CADENCE, { ...RAIL_CADENCE, S: RAIL_CADENCE.S! - 2, M: RAIL_CADENCE.M! - 2 }, {});
-    expect(r.reason).toBe("Needs 2 more S and 2 more M, none in back");
+    expect(r.reason).toBe("Needs 2 more S and 2 more M, none in backstock");
   });
 
   it("treats negative back counts as zero", () => {

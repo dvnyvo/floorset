@@ -39,7 +39,7 @@ export function depth(c: Candidate, cadence: SizeCounts, multiplier: number): Ru
   return shallow
     ? fail(
         "depth",
-        `Only ${c.back[shallow] ?? 0} ${shallow} in back, needs ${cadence[shallow]! * multiplier} to refill ${multiplier}x`,
+        `Only ${c.back[shallow] ?? 0} ${shallow} in backstock, needs ${cadence[shallow]! * multiplier} to refill ${multiplier}x`,
       )
     : pass;
 }
