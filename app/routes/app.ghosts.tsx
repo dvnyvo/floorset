@@ -109,7 +109,7 @@ export default function Ghosts() {
       <s-section>
         <s-paragraph>
           An RFID-encoded tag that keeps reading after its garment is gone hides shrink: the read rate still counts it and Shopify still
-          shows it as sellable. These RFID-encoded tags are excluded from the adjusted read rate and from floor counts until resolved.
+          shows it as sellable. These tags are excluded from the adjusted read rate and from floor counts until resolved.
         </s-paragraph>
         <s-grid gridTemplateColumns="repeat(4, 1fr)" gap="base">
           <Stat label="To check" value={d.stats.open} detail={`${d.stats.likely} likely (70%+)`} />

@@ -407,7 +407,7 @@ export default function FixtureView() {
       </s-section>
 
       <s-section
-        heading={d.fallback ? `Fallback picks (${d.passedCount})` : !d.passedCount ? "No item passes every rule" : `Top picks (${d.passedCount} ${d.passedCount === 1 ? "pick passes" : "picks pass"} every rule)`}
+        heading={d.fallback ? `Fallback picks (${d.passedCount})` : !d.passedCount ? "No item passes every rule" : `${d.passedCount} ${d.passedCount === 1 ? "pick passes" : "picks pass"} every rule`}
       >
         {d.fallback && (
           <s-banner tone="warning">
