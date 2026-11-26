@@ -5,6 +5,7 @@ import { authenticate } from "../shopify.server";
 import { saveSwapOuts } from "../lib/summaries.server";
 import { loadReplenishment } from "../lib/floor.server";
 import { SIZES, type SizeCounts } from "../lib/engine/types";
+import { onFillList } from "../lib/engine/status";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -36,7 +37,7 @@ export default function Replenish() {
 
   const slots = fixtures.flatMap((f) => f.slots.map((s) => ({ ...s, fixture: f })));
   const swapOuts = slots.filter((s) => s.swapOut);
-  const fills = slots.filter((s) => !s.swapOut && Object.keys(s.fill).length);
+  const fills = slots.filter(onFillList);
   const units = fills.reduce((n, s) => n + Object.values(s.fill).reduce((a, b) => a + (b ?? 0), 0), 0);
 
   return (
