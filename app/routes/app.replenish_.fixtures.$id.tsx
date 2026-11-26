@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import type {
   ActionFunctionArgs,
   HeadersFunction,
@@ -15,11 +15,11 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { colorNote, rank } from "../lib/engine/rank";
-import { COLORS, colorsIn } from "../lib/engine/colors";
-import { roleLabel, slotRoles } from "../lib/engine/roles";
+import { colorsIn } from "../lib/engine/colors";
+import { Block, SlotRow } from "../components/FixtureSlots";
 import { outfitRole } from "../lib/engine/visual";
 import { cap } from "../lib/format";
-import type { ColorFamily, FixtureContext, Preferences } from "../lib/engine/types";
+import type { ColorFamily, Preferences } from "../lib/engine/types";
 import { loadFixture } from "../lib/floor.server";
 import { CATEGORIES, prefsFromParams, prefsToParams } from "../lib/prefs";
 import {
@@ -156,72 +156,6 @@ export const action = async ({ request, params }: ActionFunctionArgs) => {
     throw e;
   }
 };
-
-function Block({
-  item,
-  highlight,
-}: {
-  item: { title: string; colorFamily: string; category: string } | null;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      title={item ? `${item.title} (${cap(item.colorFamily)})` : "Empty"}
-      style={{
-        flex: 1,
-        minWidth: 0,
-        padding: "8px 6px",
-        borderRadius: 6,
-        background: item ? (COLORS[item.colorFamily as ColorFamily]?.hex ?? "#ccc") : "transparent",
-        color: item && (COLORS[item.colorFamily as ColorFamily]?.tone ?? 1) < 0.5 ? "#fff" : "#1f1f1f",
-        outline: highlight ? "3px solid #2c6ecb" : "1px solid #c9cccf",
-        outlineOffset: highlight ? 2 : 0,
-        fontSize: 12,
-        lineHeight: 1.3,
-        textAlign: "center",
-        overflowWrap: "anywhere",
-      }}
-    >
-      {item ? (
-        <>
-          {/* The style name says the kind ("Long Sleeve"); the category alone would read "top" in a cover-up slot. */}
-          {item.title.split(" - ")[0]}
-          <br />
-          {cap(item.colorFamily)}
-        </>
-      ) : (
-        "empty"
-      )}
-    </div>
-  );
-}
-
-/**
- * Slots grouped the way the floor is merchandised: a gap between outfits (every 3 rail slots), a divider
- * between a table's tops and bottoms. Each slot is labelled with the role it needs.
- */
-function SlotRow({ fixture, render }: { fixture: FixtureContext; render: (i: number) => ReactNode }) {
-  const roles = slotRoles(fixture.type, fixture.zone.department, fixture.slots.length);
-  const tableSplit = Math.ceil(roles.length / 2);
-  return (
-    <div style={{ display: "flex", gap: 8 }}>
-      {roles.map((role, i) => (
-        <Fragment key={i}>
-          {fixture.type === "rail" && i > 0 && i % 3 === 0 && <div aria-hidden style={{ width: 8, flexShrink: 0 }} />}
-          {fixture.type === "table" && i === tableSplit && (
-            <div aria-hidden style={{ flexShrink: 0, borderLeft: "2px dashed #8c9196", margin: "0 4px" }} />
-          )}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: "#616161", textAlign: "center", marginBottom: 4, overflowWrap: "anywhere" }}>
-              {cap(roleLabel(role))}
-            </div>
-            {render(i)}
-          </div>
-        </Fragment>
-      ))}
-    </div>
-  );
-}
 
 const REJECTED_SHOWN = 10;
 const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighter / Brighter buttons

@@ -1,10 +1,12 @@
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
+import { useLoaderData, useSearchParams } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { saveSwapOuts } from "../lib/summaries.server";
 import { loadReplenishment } from "../lib/floor.server";
 import { SIZES, type SizeCounts } from "../lib/engine/types";
+import { onFillList } from "../lib/engine/status";
+import { sizeList } from "../lib/format";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -13,13 +15,13 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   return r;
 };
 
-const sizes = (c: SizeCounts) =>
-  SIZES.filter((s) => c[s])
-    .map((s) => `${s} ${c[s]}`)
-    .join(" · ") || "—";
+const sizes = (c: SizeCounts) => sizeList(c, SIZES);
 
 export default function Replenish() {
   const { scan, fixtures } = useLoaderData<typeof loader>();
+  // ?fixture=<id> (from the floor map's fixture panel) narrows the fill list to one fixture.
+  const [params] = useSearchParams();
+  const only = fixtures.find((f) => f.id === params.get("fixture")) ?? null;
 
   if (!scan) {
     return (
@@ -36,7 +38,8 @@ export default function Replenish() {
 
   const slots = fixtures.flatMap((f) => f.slots.map((s) => ({ ...s, fixture: f })));
   const swapOuts = slots.filter((s) => s.swapOut);
-  const fills = slots.filter((s) => !s.swapOut && Object.keys(s.fill).length);
+  const fills = slots.filter(onFillList);
+  const shownFills = only ? fills.filter((s) => s.fixture.id === only.id) : fills;
   const units = fills.reduce((n, s) => n + Object.values(s.fill).reduce((a, b) => a + (b ?? 0), 0), 0);
 
   return (
@@ -76,7 +79,12 @@ export default function Replenish() {
         </s-table>
       </s-section>
 
-      <s-section heading={`Fill list (${fills.length})`}>
+      <s-section heading={only ? `Fill list · ${only.name} (${shownFills.length})` : `Fill list (${fills.length})`}>
+        {only && (
+          <s-paragraph>
+            Showing {only.name} only. <s-link href="/app/replenish">Show all {fills.length}</s-link>
+          </s-paragraph>
+        )}
         <s-table>
           <s-table-header-row>
             <s-table-header listSlot="primary">Item</s-table-header>
@@ -85,7 +93,7 @@ export default function Replenish() {
             <s-table-header>On floor</s-table-header>
           </s-table-header-row>
           <s-table-body>
-            {fills.map((s) => (
+            {shownFills.map((s) => (
               <s-table-row key={`${s.fixture.id}-${s.slot}`}>
                 <s-table-cell>{s.productTitle}</s-table-cell>
                 <s-table-cell>{s.fixture.name}</s-table-cell>

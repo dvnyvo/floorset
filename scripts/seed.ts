@@ -10,6 +10,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { generate, SIZES, type SeedProduct } from "./seed-data.ts";
+import { AREAS, fixtureRect, ZONE_RECTS } from "./floor-plan.ts";
 
 const store = process.argv[2] ?? process.env.SHOPIFY_STORE;
 if (!store?.endsWith(".myshopify.com")) {
@@ -169,6 +170,7 @@ async function main() {
       db.placement.deleteMany(),
       db.fixture.deleteMany(),
       db.zone.deleteMany(),
+      db.floorArea.deleteMany(),
       db.cadenceRule.deleteMany(),
     ]);
     for (const z of data.zones) {
@@ -177,10 +179,16 @@ async function main() {
           name: z.name,
           department: z.department,
           palette: z.palette,
-          fixtures: { create: data.fixtures.filter((f) => f.zone === z.name).map(({ name, type, slotCount }) => ({ name, type, slotCount })) },
+          ...ZONE_RECTS[z.name],
+          fixtures: {
+            create: data.fixtures
+              .filter((f) => f.zone === z.name)
+              .map(({ name, type, slotCount }) => ({ name, type, slotCount, ...fixtureRect(z.name, name) })),
+          },
         },
       });
     }
+    await db.floorArea.createMany({ data: AREAS });
     const fixtureId = new Map((await db.fixture.findMany()).map((f) => [f.name, f.id]));
     await db.cadenceRule.createMany({ data: data.cadenceRules });
     await db.placement.createMany({

@@ -146,8 +146,10 @@ export async function loadReplenishment(admin: AdminClient) {
       id: f.id,
       name: f.name,
       zone: f.zone.name,
+      department: f.zone.department,
       type: f.type as FixtureType,
       slotCount: f.slotCount,
+      rect: rectOf(f),
       slots: f.placements.map((pl): SlotRow => {
         const vs = byProduct.get(pl.productId) ?? [];
         const floor = floorOf(vs);
@@ -167,6 +169,37 @@ export async function loadReplenishment(admin: AdminClient) {
         };
       }),
     })),
+  };
+}
+
+const rectOf = (r: { x: number | null; y: number | null; w: number | null; h: number | null }) =>
+  r.x === null || r.y === null || r.w === null || r.h === null ? null : { x: r.x, y: r.y, w: r.w, h: r.h };
+
+/**
+ * The floor plan: zone and fixture rectangles plus non-sales areas with their open loose-tag suspects.
+ * Fixture rectangles without a floor scan are still drawn, so the map shows before the first scan.
+ */
+export async function loadFloorPlan() {
+  const [zones, fixtures, areas, open] = await Promise.all([
+    db.zone.findMany({ orderBy: { name: "asc" } }),
+    db.fixture.findMany({ include: { zone: true }, orderBy: { name: "asc" } }),
+    db.floorArea.findMany({ orderBy: { name: "asc" } }),
+    db.ghostSuspect.findMany({ where: { resolution: null }, select: { lastSeenArea: true, confidence: true } }),
+  ]);
+  const openIn = (area: string) => open.filter((s) => s.lastSeenArea === area).length;
+  return {
+    zones: zones.map((z) => ({ name: z.name, rect: rectOf(z) })),
+    fixtures: fixtures.map((f) => ({
+      id: f.id,
+      name: f.name,
+      zone: f.zone.name,
+      department: f.zone.department,
+      type: f.type as FixtureType,
+      slotCount: f.slotCount,
+      rect: rectOf(f),
+    })),
+    areas: areas.map((a) => ({ name: a.name, label: a.label, rect: rectOf(a), looseTags: openIn(a.name) })),
+    looseTags: { open: open.length, likely: open.filter((s) => s.confidence >= 0.7).length },
   };
 }
 

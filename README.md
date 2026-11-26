@@ -18,6 +18,7 @@ Stores that tag every unit with RFID still run into three gaps that Shopify's in
 
 | Page | What it shows |
 | --- | --- |
+| **Floor map** (home) | The store floor drawn from a made-up floor plan: each fixture colored and labeled by status (needs replacing, needs fill, OK), loose-tag counts on the fitting room, entrance, cash wrap and back corridor, and a panel per fixture with its slots, swap-out reasons and fill items. |
 | **Scans** | Upload a CSV from the handheld reader (`epc,area,read_at`) as a weekly inventory scan or a morning floor scan. Rows are validated, duplicates merged, and loose-tag detection re-runs. |
 | **Read rate** | Latest inventory scan against Shopify on-hand: raw rate, adjusted rate (excluding suspected loose tags), by category and SKU against a 95% target, SKUs that come up short scan after scan, and a chart of the rate over time. |
 | **Loose tags** | Suspects with a confidence score and the signals behind it, hotspots by area, a sweep list grouped by area, and a resolve flow. A confirmed loose tag proposes an inventory correction in Shopify. |
@@ -122,7 +123,8 @@ Requires Node 22.12+, the Shopify CLI, a Partner account and a development store
 ```sh
 npm install
 npm run dev                                   # shopify app dev; install the app on your dev store
-npm run seed -- <store>.myshopify.com         # 163 products, inventory, layout, RFID units, sales
+npm run seed -- <store>.myshopify.com         # 163 products, inventory, layout and floor plan, RFID units, sales
+npm run seed-floor-plan                       # floor plan only, for a database seeded before the map existed
 npm run gen-scans                             # writes scans/*.csv (8 weekly inventory scans, 4 floor scans)
 ```
 

@@ -1,176 +1,190 @@
+import { useEffect, useRef, useState } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
-import { useState } from "react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
-import { saveReadRate } from "../lib/summaries.server";
-import { loadDashboard } from "../lib/floor.server";
-import { READ_RATE_TARGET, type RateRow } from "../lib/scans/reconcile";
-import { ReadRateChart } from "../components/ReadRateChart";
-import { cap, pct } from "../lib/format";
+import { loadFloorPlan, loadReplenishment } from "../lib/floor.server";
+import { fixtureStatus, onFillList, STATUS_LABEL } from "../lib/engine/status";
+import { FloorMap, FloorMapLegend } from "../components/FloorMap";
+import { Block, SlotRow } from "../components/FixtureSlots";
+import { SIZES } from "../lib/engine/types";
+import { sizeList } from "../lib/format";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const d = await loadDashboard(admin);
-  await saveReadRate(d);
-  return d;
+  const [plan, repl] = await Promise.all([loadFloorPlan(), loadReplenishment(admin)]);
+  const byId = new Map(repl.fixtures.map((f) => [f.id, f]));
+
+  const fixtures = plan.fixtures.flatMap((pf) => {
+    if (!pf.rect) return [];
+    const f = byId.get(pf.id);
+    const slots = f?.slots ?? [];
+    return [
+      {
+        id: pf.id,
+        name: pf.name,
+        zone: pf.zone,
+        department: pf.department,
+        type: pf.type,
+        slotCount: pf.slotCount,
+        rect: pf.rect,
+        status: repl.scan ? fixtureStatus(slots) : null,
+        replace: slots.filter((s) => s.swapOut).length,
+        fill: slots.filter(onFillList).length,
+        slots,
+      },
+    ];
+  });
+  const zones = plan.zones.flatMap((z) => (z.rect ? [{ name: z.name, rect: z.rect }] : []));
+  const areas = plan.areas.flatMap((a) => (a.rect ? [{ ...a, rect: a.rect }] : []));
+  const rects = [...zones, ...areas, ...fixtures].map((x) => x.rect);
+  const size = {
+    w: Math.max(0, ...rects.map((r) => r.x + r.w)) + 2,
+    h: Math.max(0, ...rects.map((r) => r.y + r.h)) + 2,
+  };
+
+  return {
+    scanDate: repl.scan?.takenAt.slice(0, 10) ?? null,
+    size,
+    zones,
+    areas,
+    fixtures,
+    looseTags: plan.looseTags,
+  };
 };
 
+const plural = (n: number, one: string, many: string) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
 
-function RateBadge({ row }: { row: RateRow }) {
-  return row.belowTarget ? <s-badge tone="critical">Below {pct(READ_RATE_TARGET)}</s-badge> : <s-badge tone="success">On target</s-badge>;
-}
-
-export default function Dashboard() {
+export default function FloorMapPage() {
   const d = useLoaderData<typeof loader>();
-  const [allChronic, setAllChronic] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const fixture = d.fixtures.find((f) => f.id === selected) ?? null;
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (selected) panel.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [selected]);
 
-  if (!d.scan) {
+  if (!d.fixtures.length) {
     return (
-      <s-page heading="Read rate">
+      <s-page heading="Floor map">
         <s-section>
-          <s-empty-state heading="No inventory scan yet">
-            <s-paragraph>Upload a weekly inventory scan to compare RFID-encoded tag reads against Shopify&apos;s on-hand count.</s-paragraph>
-            <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
+          <s-empty-state heading="No floor plan yet">
+            <s-paragraph>
+              Run <code>npm run seed-floor-plan</code> to place the zones and fixtures on the map.
+            </s-paragraph>
           </s-empty-state>
         </s-section>
       </s-page>
     );
   }
 
-  const gap = (d.total.rawRate ?? 0) - (d.total.adjustedRate ?? 0);
+  const replaceSlots = d.fixtures.reduce((n, f) => n + f.replace, 0);
+  const replaceFixtures = d.fixtures.filter((f) => f.status === "replace").length;
+  const fillItems = d.fixtures.reduce((n, f) => n + f.fill, 0);
+  const summary = d.scanDate
+    ? `${plural(replaceSlots, "slot needs", "slots need")} replacing on ${plural(replaceFixtures, "fixture", "fixtures")}, ` +
+      `${plural(fillItems, "item needs", "items need")} filling, ` +
+      `${plural(d.looseTags.open, "suspected loose tag", "suspected loose tags")} (${d.looseTags.likely.toLocaleString()} likely).`
+    : `${plural(d.looseTags.open, "suspected loose tag", "suspected loose tags")} (${d.looseTags.likely.toLocaleString()} likely).`;
+
   return (
-    <s-page heading="Read rate">
-      <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
-
-      <s-section heading={`Inventory scan · ${d.scan.takenAt.slice(0, 10)}`}>
-        <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
-          <Stat label="Raw read rate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on-hand units read`} />
-          <Stat label="Adjusted read rate" value={pct(d.total.adjustedRate)} detail="Excludes suspected loose tags" />
-          <Stat label="Hidden shrink" value={`${(gap * 100).toFixed(1)} pts`} detail={`${d.ghostCount} suspected loose tags`} />
-          <Stat label="Unknown RFID tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
-        </s-grid>
+    <s-page heading="Floor map">
+      <s-button slot="primary-action" href="/app/replenish">
+        Replenishment
+      </s-button>
+      <s-section heading={d.scanDate ? `Floor scan · ${d.scanDate}` : "No floor scan yet"}>
+        <s-stack gap="base">
+          <s-paragraph>{summary}</s-paragraph>
+          {!d.scanDate && (
+            <s-banner tone="info">
+              Upload this morning&apos;s floor scan on the Scans page to color fixtures by status.
+            </s-banner>
+          )}
+          <FloorMap
+            size={d.size}
+            zones={d.zones}
+            areas={d.areas}
+            fixtures={d.fixtures}
+            selected={selected}
+            onSelect={setSelected}
+          />
+          <FloorMapLegend />
+          <s-text color="subdued">Select a fixture (click, or Tab then Enter) to see its slots.</s-text>
+        </s-stack>
       </s-section>
 
-      {d.trend.length > 1 && (
-        <s-section heading="Read rate over time">
-          <s-stack direction="block" gap="base">
-            <s-paragraph>Adjusted read rate at each inventory scan, measured against on-hand at the time.</s-paragraph>
-            <ReadRateChart points={d.trend} target={READ_RATE_TARGET} />
-            <details>
-              <summary>Show as a table</summary>
-              <s-table>
-                <s-table-header-row>
-                  <s-table-header listSlot="primary">Inventory scan</s-table-header>
-                  <s-table-header format="numeric">Raw</s-table-header>
-                  <s-table-header format="numeric">Adjusted</s-table-header>
-                  {d.byCategory.map((c) => (
-                    <s-table-header key={c.key} format="numeric">
-                      {cap(c.label)}
-                    </s-table-header>
-                  ))}
-                </s-table-header-row>
-                <s-table-body>
-                  {d.trend.map((p) => (
-                    <s-table-row key={p.date}>
-                      <s-table-cell>{p.date}</s-table-cell>
-                      <s-table-cell>{pct(p.rawRate)}</s-table-cell>
-                      <s-table-cell>{pct(p.adjustedRate)}</s-table-cell>
-                      {d.byCategory.map((c) => (
-                        <s-table-cell key={c.key}>{pct(p.byCategory[c.key] ?? null)}</s-table-cell>
-                      ))}
-                    </s-table-row>
-                  ))}
-                </s-table-body>
-              </s-table>
-            </details>
-          </s-stack>
-        </s-section>
-      )}
-
-      <s-section heading="By category">
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Category</s-table-header>
-            <s-table-header format="numeric">On hand</s-table-header>
-            <s-table-header format="numeric">Raw</s-table-header>
-            <s-table-header format="numeric">Adjusted</s-table-header>
-            <s-table-header>Status</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {d.byCategory.map((c) => (
-              <s-table-row key={c.key}>
-                <s-table-cell>{cap(c.label)}</s-table-cell>
-                <s-table-cell>{c.expected.toLocaleString()}</s-table-cell>
-                <s-table-cell>{pct(c.rawRate)}</s-table-cell>
-                <s-table-cell>{pct(c.adjustedRate)}</s-table-cell>
-                <s-table-cell>
-                  <RateBadge row={c} />
-                </s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
-      </s-section>
-
-      <s-section heading={`Short on ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}>
-        <s-paragraph>
-          SKUs with fewer RFID tags read than Shopify&apos;s on-hand count on each of the last {d.countsCompared} inventory scans. Likely
-          real shrink: check and correct the count.
-        </s-paragraph>
-        {d.chronic.length ? (
-          <s-unordered-list>
-            {(allChronic ? d.chronic : d.chronic.slice(0, SHOWN)).map((r) => (
-              <s-list-item key={r.key}>
-                {r.label}: {r.adjusted} of {r.expected} read
-              </s-list-item>
-            ))}
-          </s-unordered-list>
-        ) : (
-          <s-paragraph>None.</s-paragraph>
-        )}
-        {d.chronic.length > SHOWN && (
-          <s-button variant="tertiary" onClick={() => setAllChronic(!allChronic)}>
-            {allChronic ? `Show first ${SHOWN}` : `Show all (${d.chronic.length})`}
-          </s-button>
-        )}
-      </s-section>
-
-      <s-section heading={`SKUs below target (${d.flaggedSkuCount})`}>
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">SKU</s-table-header>
-            <s-table-header format="numeric">On hand</s-table-header>
-            <s-table-header format="numeric">Read</s-table-header>
-            <s-table-header format="numeric">Adjusted rate</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {d.flaggedSkus.map((r) => (
-              <s-table-row key={r.key}>
-                <s-table-cell>{r.label}</s-table-cell>
-                <s-table-cell>{r.expected}</s-table-cell>
-                <s-table-cell>{r.adjusted}</s-table-cell>
-                <s-table-cell>{pct(r.adjustedRate)}</s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
-      </s-section>
+      <div ref={panel}>{fixture && <FixturePanel fixture={fixture} hasScan={!!d.scanDate} />}</div>
     </s-page>
   );
 }
 
-const SHOWN = 10; // chronic shorts listed before "Show all"
+type PanelFixture = ReturnType<typeof useLoaderData<typeof loader>>["fixtures"][number];
 
-function Stat({ label, value, detail }: { label: string; value: string; detail: string }) {
+const STATUS_TONE = { replace: "critical", fill: "warning", ok: "success" } as const;
+
+/** The selected fixture: its slots in floor order, swap-outs with their reason, and what to bring out. */
+function FixturePanel({ fixture: f, hasScan }: { fixture: PanelFixture; hasScan: boolean }) {
+  const bySlot = new Map(f.slots.map((s) => [s.slot, s]));
+  const slots = Array.from({ length: f.slotCount }, (_, i) => bySlot.get(i) ?? null);
+  const swapOuts = f.slots.filter((s) => s.swapOut);
+  const fills = f.slots.filter(onFillList);
+
   return (
-    <s-box padding="base" borderWidth="base" borderRadius="base">
-      <s-stack direction="block" gap="small-200">
-        <s-text color="subdued">{label}</s-text>
-        <s-heading>{value}</s-heading>
-        <s-text color="subdued">{detail}</s-text>
+    <s-section heading={f.name}>
+      <s-stack gap="base">
+        {f.status ? (
+          <s-badge tone={STATUS_TONE[f.status]}>{STATUS_LABEL[f.status]}</s-badge>
+        ) : (
+          <s-text color="subdued">{hasScan ? "Not in the latest floor scan" : "No floor scan yet"}</s-text>
+        )}
+        <SlotRow
+          fixture={{ type: f.type, zone: { department: f.department }, slots }}
+          render={(i) => {
+            const s = slots[i];
+            return (
+              <div style={{ display: "flex" }}>
+                <Block item={s && { title: s.productTitle, colorFamily: s.colorFamily }} flag={s?.swapOut ? "Swap out" : undefined} />
+              </div>
+            );
+          }}
+        />
+
+        {swapOuts.length > 0 && (
+          <s-stack gap="small">
+            <s-heading>Swap-outs ({swapOuts.length})</s-heading>
+            {swapOuts.map((s) => (
+              <s-box key={s.slot} padding="base" border="base" borderRadius="base">
+                <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
+                  <s-stack gap="small-200">
+                    <s-text type="strong">
+                      Slot {s.slot + 1}: {s.productTitle}
+                    </s-text>
+                    <s-text>{s.reason}</s-text>
+                  </s-stack>
+                  <s-button href={`/app/replenish/fixtures/${f.id}?slot=${s.slot}`}>Open replacement view</s-button>
+                </s-stack>
+              </s-box>
+            ))}
+          </s-stack>
+        )}
+
+        {fills.length > 0 && (
+          <s-stack gap="small">
+            <s-heading>Fill ({fills.length})</s-heading>
+            <s-unordered-list>
+              {fills.map((s) => (
+                <s-list-item key={s.slot}>
+                  {s.productTitle}: Bring out {sizeList(s.fill, SIZES)}
+                </s-list-item>
+              ))}
+            </s-unordered-list>
+            <s-link href={`/app/replenish?fixture=${f.id}`}>Show fill list</s-link>
+          </s-stack>
+        )}
+
+        {f.status === "ok" && <s-paragraph>Every slot holds its size run. Nothing to bring out.</s-paragraph>}
       </s-stack>
-    </s-box>
+    </s-section>
   );
 }
 
