@@ -21,7 +21,7 @@ describe("depth", () => {
     const back = { ...deepBack(), M: 5 }; // M cadence 3 -> needs 6
     const r = depth(candidate({ back }), RAIL_CADENCE, 2);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason).toBe("Only 5 M in back, needs 6 to refill 2x");
+    if (!r.ok) expect(r.reason).toBe("Only 5 M in backstock, needs 6 to refill 2x");
   });
   it("passes at exactly 2x", () => {
     const back = Object.fromEntries(Object.entries(RAIL_CADENCE).map(([s, n]) => [s, n * 2]));

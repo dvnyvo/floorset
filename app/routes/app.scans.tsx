@@ -10,7 +10,7 @@ import { runDetection } from "../lib/ghosts.server";
 import { snapshotCounts } from "../lib/floor.server";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const TYPES = { full_count: "Weekly full count", floor: "Morning floor scan" } as const;
+const TYPES = { full_count: "Weekly inventory scan", floor: "Morning floor scan" } as const;
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -140,7 +140,7 @@ export default function Scans() {
             <s-table-header-row>
               <s-table-header>Date</s-table-header>
               <s-table-header>Type</s-table-header>
-              <s-table-header format="numeric">Tags read</s-table-header>
+              <s-table-header format="numeric">RFID tags read</s-table-header>
               <s-table-header>Actions</s-table-header>
             </s-table-header-row>
             <s-table-body>

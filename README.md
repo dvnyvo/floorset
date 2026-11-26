@@ -10,18 +10,18 @@ Built on synthetic data for a mid-size apparel retailer scenario (see [Synthetic
 
 Stores that tag every unit with RFID still run into three gaps that Shopify's inventory model doesn't cover on its own:
 
-1. **Read rate hides shrink.** When a garment is stolen and its tag is cut off and dropped, the tag keeps reading. The count looks healthy while the stock is gone.
-2. **Broken size runs stay on the floor.** A style that's out of S and M in the back still occupies its rail. Someone has to notice, then pick a replacement that has a full run, enough depth, and fits the zone's colors and the fixture's mix.
+1. **Read rate hides shrink.** When a garment is stolen and its RFID-encoded tag is cut off and dropped, the tag keeps reading. The count looks healthy while the stock is gone.
+2. **Broken size runs stay on the floor.** A style that's out of S and M in backstock still occupies its rail. Someone has to notice, then pick a replacement that has a full run, enough depth, and fits the zone's colors and the fixture's mix.
 3. **Fixes are manual and untracked.** Inventory corrections and floor changes happen without a record of who changed what, or a way to reverse it.
 
 ## What it does
 
 | Page | What it shows |
 | --- | --- |
-| **Scans** | Upload a CSV from the handheld reader (`epc,area,read_at`) as a full count or a morning floor scan. Rows are validated, duplicates merged, and loose-tag detection re-runs. |
-| **Read rate** | Latest full count against Shopify on-hand: raw rate, adjusted rate (excluding suspected loose tags), by category and SKU against a 95% target, SKUs that come up short count after count, and a chart of the rate over time. |
+| **Scans** | Upload a CSV from the handheld reader (`epc,area,read_at`) as a weekly inventory scan or a morning floor scan. Rows are validated, duplicates merged, and loose-tag detection re-runs. |
+| **Read rate** | Latest inventory scan against Shopify on-hand: raw rate, adjusted rate (excluding suspected loose tags), by category and SKU against a 95% target, SKUs that come up short scan after scan, and a chart of the rate over time. |
 | **Loose tags** | Suspects with a confidence score and the signals behind it, hotspots by area, a sweep list grouped by area, and a resolve flow. A confirmed loose tag proposes an inventory correction in Shopify. |
-| **Replenishment** | This morning's floor scan against each fixture's size cadence and back stock: a fill list ("bring out 2 M") and swap-outs (items that can't hold their run). |
+| **Replenishment** | This morning's floor scan against each fixture's size cadence and backstock: a fill list ("bring out 2 M") and swap-outs (items that can't hold their run). |
 | **Fixture view** | For a swap-out: top 3 replacements with plain-English reasons, every rejected item with the rule that blocked it, before/after color blocks, refine buttons, and the swap proposal. |
 | **Sidekick** | Three read-only tools so Shopify's assistant can answer "what's my read rate?", "what needs replacing?", "where are the loose tags?" |
 
@@ -30,9 +30,9 @@ An optional Claude copilot on the fixture view turns requests like "something br
 ## Demo (5 minutes)
 
 1. **Read rate.** The store reads 96.1%, above the 95% target. With suspected loose tags taken out it reads 92.3%: 3.8 points of shrink the headline number hides. The chart shows the adjusted rate holding near 96% for six counts and then falling as loose tags pile up, while bras slide from 95% to 89%.
-2. **Loose tags.** 255 suspects, almost all in four spots where no stock belongs: the fitting room, an entrance corner, the cash wrap and a back corridor. Mark one "Tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
+2. **Loose tags.** 255 suspects, almost all in four spots where no stock belongs: the fitting room, an entrance corner, the cash wrap and a back corridor. Mark one "RFID tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
 3. **Replenishment.** 8 items can't hold their size run. Click **Find replacement** on Zone 2 Rail 2.
-4. **Fixture view.** The before row shows the rail grouped into outfits, each slot labelled with the role it needs; the after row shows it with the top pick. Each pick says why in plain English (size run, back stock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap. Zone 1 Rail 1, slot 2 has no valid pick; it lists the closest options instead, each labeled with the one rule it breaks.
+4. **Fixture view.** The before row shows the rail grouped into outfits, each slot labelled with the role it needs; the after row shows it with the top pick. Each pick says why in plain English (size run, backstock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap. Zone 1 Rail 1, slot 2 has no valid pick; it lists the closest options instead, each labeled with the one rule it breaks.
 5. **Sidekick.** Ask "Which floor items need replacing?" and follow the link back to the fixture view.
 
 ## Architecture
@@ -52,7 +52,7 @@ flowchart LR
     E[Rules engine<br/>pure TypeScript]
     G[Loose-tag detector<br/>pure TypeScript]
     P[Proposals<br/>approve, apply, audit, undo]
-    DB[(SQLite via Prisma<br/>layout, cadences, tags,<br/>scans, snapshots, sales,<br/>proposals, audit)]
+    DB[(SQLite via Prisma<br/>layout, cadences, RFID tags,<br/>scans, snapshots, sales,<br/>proposals, audit)]
     API[/api/sidekick/:tool/]
     C[Claude copilot<br/>optional]
   end
@@ -77,24 +77,24 @@ Shopify stays the source of truth for products and counts. The app database hold
 
 - **A deterministic rules engine, with the LLM kept at the edge.** Ranking is pure functions: stock rules (full size run, 2× depth, not damaged, fixture type, department), then preferences, then visual standards (outfit role, zone palette, color adjacency), then a weighted score. The engine is unit-tested and explainable. The copilot can only change preferences, which narrow or re-weight; it can't loosen a rule, and its propose tool rejects anything outside the engine's current picks.
 - **Fixtures are merchandised as outfits.** Every 3 rail slots form one outfit, and each slot needs a role: top (bra, tank, tee, shirt), bottom (legging, short, jogger, trouser) or cover-up (jacket, long sleeve, hoodie, all outerwear). Women's rails run top → bottom → cover-up, men's run cover-up → top → bottom. Tables take tops and non-outerwear cover-ups on the left half and bottoms on the right; outerwear never goes on a table. Role is its own product metafield, separate from category: a long sleeve is a top by category and a cover-up by role. A wrong-role item is rejected with the slot's rule ("Slot 3 is a cover-up slot (top → bottom → cover-up)"). The sequence already limits each role per fixture, so there is no separate per-category cap.
-- **Score weights: contrast 0.40, velocity 0.35, cover 0.25.** With roles fixed by the slot, the score ranks items that already fit: contrast is how far its color is from the neighbors (hue and lightness combined, 0 for the same color family, so a lilac next to a pink still scores), velocity is sales against the fastest seller in the whole category, and cover is weeks of supply in the back, full at 4 weeks. "More contrast" raises contrast to 0.80.
+- **Score weights: contrast 0.40, velocity 0.35, cover 0.25.** With roles fixed by the slot, the score ranks items that already fit: contrast is how far its color is from the neighbors (hue and lightness combined, 0 for the same color family, so a lilac next to a pink still scores), velocity is sales against the fastest seller in the whole category, and cover is weeks of supply in backstock, full at 4+ weeks. "More contrast" raises contrast to 0.80.
 - **Closest options, never proposable.** When nothing passes, the view lists up to 3 items that break exactly one visual rule (zone palette or color adjacency), labeled with that rule, e.g. "Fits everything except Zone 1's palette". Stock rules, preferences and the slot's role are never relaxed for them, and the propose action only accepts real picks.
 - **Leniency only when nothing passes.** If no item has stock to refill the slot twice, the engine re-ranks accepting items that fill the size run once, and labels them as fallback picks. A broken run is never offered.
 - **Every write is a proposal.** Nothing touches Shopify until a person approves it. Applying claims the proposal first (no double apply), re-checks preconditions, and writes with compare-and-swap: `metafieldsSet` with `compareDigest` for placements, and `inventoryAdjustQuantities` with `changeFromQuantity` and an `@idempotent` key for corrections. The audit row stores before and after, and undo refuses if anything changed since.
-- **Loose-tag signals that hold up under re-merchandising.** Detection first flagged tags read outside their own zone. That produced false alarms after a real swap moved stock between zones, so "wrong area" now means outside every sales zone and the stockroom. Signals combine as 1 − Π(1 − weight).
+- **Loose-tag signals that hold up under re-merchandising.** Detection first flagged RFID-encoded tags read outside their own zone. That produced false alarms after a real swap moved stock between zones, so "wrong area" now means outside every sales zone and the stockroom. Signals combine as 1 − Π(1 − weight).
 - **Sidekick answers from cached summaries.** Sidekick data tools must respond within 1 second, too short for a live catalog read. Pages save a trimmed summary as they load (under 800 tokens each) and the tools read it back with an `asOf` time.
 - **A cached catalog that webhooks keep honest.** A full catalog read is about 6 Admin API calls, so it is cached in memory. `inventory_levels/update`, `products/update` and `products/delete` webhooks drop the cache, and so do the app's own writes, so a page never shows a count the app itself just changed. A 5-minute limit covers a missed webhook.
 - **Sales from order webhooks, counted once.** The `orders/create` handler adds each line to a per-variant daily rollup that feeds sales velocity. Shopify can deliver a webhook more than once, so the delivery ID and the rollup update are written in one transaction; a repeat delivery fails the unique check and changes nothing. Shopify only delivers order webhooks to apps with protected customer data access, which is selected for the app in the Partner Dashboard (no review needed for development stores). The handler reads line items only and stores no customer fields.
-- **Read-rate history as snapshots.** When a full count is uploaded, the rate per category is frozen against on-hand at that moment. The trend chart reads those few rows and never re-reads old scans or guesses past inventory.
+- **Read-rate history as snapshots.** When an inventory scan is uploaded, the rate per category is frozen against on-hand at that moment. The trend chart reads those few rows and never re-reads old scans or guesses past inventory.
 - **No action extension.** Sidekick action intents are a fixed list of types, none of which fits "fixture swap". Rather than mislabel it, the swap-out tool returns a link to the fixture view, where the swap is staged and approved.
 
 ## Results on the synthetic data
 
 | Check | Result |
 | --- | --- |
-| Raw vs adjusted read rate (latest count, 6,730 units on hand) | 96.1% raw, 92.3% adjusted. The raw rate passes the 95% target; the adjusted rate fails it |
-| Planted bra theft (5% of units, tags gone, building up over six weeks) | Bras fall from 95% to 89% across eight counts |
-| Loose-tag detection | 277 planted, 255 flagged, 0 false alarms. The 22 planted tags dropped at their own fixture are not flagged: they look exactly like stock on the floor, which is the limit of scan-only detection |
+| Raw vs adjusted read rate (latest inventory scan, 6,730 units on hand) | 96.1% raw, 92.3% adjusted. The raw rate passes the 95% target; the adjusted rate fails it |
+| Planted bra theft (5% of units, RFID tags gone, building up over six weeks) | Bras fall from 95% to 89% across eight inventory scans |
+| Loose-tag detection | 277 planted, 255 flagged, 0 false alarms. The 22 planted RFID-encoded tags dropped at their own fixture are not flagged: they look exactly like stock on the floor, which is the limit of scan-only detection |
 | Swap-outs | 8 found; 7 have valid replacements. 1 (Zone 1 Rail 1, slot 2) is planted with no valid pick and shows 3 closest options |
 | Write path | Propose → apply → undo verified against a dev store for both metafield swaps and inventory corrections |
 
@@ -123,10 +123,10 @@ Requires Node 22.12+, the Shopify CLI, a Partner account and a development store
 npm install
 npm run dev                                   # shopify app dev; install the app on your dev store
 npm run seed -- <store>.myshopify.com         # 163 products, inventory, layout, RFID units, sales
-npm run gen-scans                             # writes scans/*.csv (8 weekly counts, 4 floor scans)
+npm run gen-scans                             # writes scans/*.csv (8 weekly inventory scans, 4 floor scans)
 ```
 
-Then upload the CSVs from `scans/` on the **Scans** page, oldest first. `scans/messy/reader_export.csv` is a deliberately bad export (reordered columns, repeat reads, invalid tags and dates, tags the store doesn't own) for trying the parser; delete that scan afterwards so it doesn't count as the latest. The seed is rerunnable: it deletes the products it created before (tagged `floorset-seed`).
+Then upload the CSVs from `scans/` on the **Scans** page, oldest first. `scans/messy/reader_export.csv` is a deliberately bad export (reordered columns, repeat reads, invalid EPCs and dates, RFID-encoded tags the store doesn't own) for trying the parser; delete that scan afterwards so it doesn't count as the latest. The seed is rerunnable: it deletes the products it created before (tagged `floorset-seed`).
 
 The copilot is optional. Add `ANTHROPIC_API_KEY=...` to `.env` to show it.
 

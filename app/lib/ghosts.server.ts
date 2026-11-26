@@ -46,7 +46,7 @@ export type Resolution = "loose_tag" | "item_found" | "not_found";
  */
 export async function resolveSuspect(admin: AdminClient, epc: string, resolution: Resolution) {
   const s = await db.ghostSuspect.findUnique({ where: { epc } });
-  if (!s || s.resolution) throw new ProposalError("That tag isn't on the open list");
+  if (!s || s.resolution) throw new ProposalError("That RFID tag isn't on the open list");
 
   if (resolution === "not_found") {
     const signals = [...new Set([...(s.signals as Signal[]), "read_but_not_found" as const])];
@@ -61,7 +61,7 @@ export async function resolveSuspect(admin: AdminClient, epc: string, resolution
   const unit = await db.unit.findUnique({ where: { epc } });
   if (unit?.status !== "in_stock") return { proposed: false };
   const v = (await fetchCatalog(admin)).variants.find((x) => x.variantId === unit.variantId);
-  if (!v) throw new ProposalError("That tag's product is no longer in Shopify");
+  if (!v) throw new ProposalError("That RFID tag's product is no longer in Shopify");
   await proposeCorrection(
     { epc, variantId: v.variantId, inventoryItemId: v.inventoryItemId },
     { sku: v.sku, title: `${v.productTitle} / ${v.size}`, epc, area: s.lastSeenArea, delta: -1 },

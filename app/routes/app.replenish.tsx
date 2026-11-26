@@ -44,7 +44,7 @@ export default function Replenish() {
       <s-section heading={`Floor scan · ${scan.takenAt.slice(0, 10)}`}>
         <s-paragraph>
           {swapOuts.length} items can&apos;t hold their size run and need a replacement. {fills.length} items need{" "}
-          {units} units brought out from the back.
+          {units} units brought out from backstock.
         </s-paragraph>
       </s-section>
 

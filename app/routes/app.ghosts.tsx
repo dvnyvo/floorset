@@ -108,8 +108,8 @@ export default function Ghosts() {
 
       <s-section>
         <s-paragraph>
-          A tag that keeps reading after its garment is gone hides shrink: the read rate still counts it and Shopify still
-          shows it as sellable. These tags are excluded from the adjusted read rate and from floor counts until resolved.
+          An RFID-encoded tag that keeps reading after its garment is gone hides shrink: the read rate still counts it and Shopify still
+          shows it as sellable. These RFID-encoded tags are excluded from the adjusted read rate and from floor counts until resolved.
         </s-paragraph>
         <s-grid gridTemplateColumns="repeat(4, 1fr)" gap="base">
           <Stat label="To check" value={d.stats.open} detail={`${d.stats.likely} likely (70%+)`} />
@@ -175,7 +175,7 @@ export default function Ghosts() {
                   <s-table-cell>
                     <s-stack direction="inline" gap="small-200">
                       <s-button disabled={busy} onClick={() => post({ intent: "resolve", id: s.epc, resolution: "loose_tag" })}>
-                        Tag only
+                        RFID tag only
                       </s-button>
                       <s-button disabled={busy} onClick={() => post({ intent: "resolve", id: s.epc, resolution: "item_found" })}>
                         Garment here
@@ -246,7 +246,7 @@ export default function Ghosts() {
             </s-table-body>
           </s-table>
         ) : (
-          <s-paragraph>Mark a tag as &quot;Tag only&quot; to propose writing that unit off in Shopify.</s-paragraph>
+          <s-paragraph>Mark an RFID-encoded tag as &quot;RFID tag only&quot; to propose writing that unit off in Shopify.</s-paragraph>
         )}
       </s-section>
     </s-page>

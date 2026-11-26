@@ -230,7 +230,7 @@ const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighte
 const SCORE_PARTS = [
   ["contrast", "Contrast", "how different its color is from its neighbors, in hue and lightness"],
   ["velocity", "Velocity", "sales vs the fastest seller in its category, across the whole catalog"],
-  ["cover", "Cover", "weeks of sales the back stock covers, full at 4+ weeks"],
+  ["cover", "Cover", "weeks of sales the backstock covers, full at 4+ weeks"],
 ] as const;
 
 const STATUS_TONE = {
@@ -411,7 +411,7 @@ export default function FixtureView() {
       >
         {d.fallback && (
           <s-banner tone="warning">
-            No item has enough back stock to refill this slot twice. These can fill the full size run once, which still
+            No item has enough backstock to refill this slot twice. These can fill the full size run once, which still
             beats leaving a broken run on the floor. Reorder or plan the next swap soon.
           </s-banner>
         )}

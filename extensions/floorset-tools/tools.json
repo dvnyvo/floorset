@@ -2,7 +2,7 @@
   {
     "$schema": "https://extensions.shopifycdn.com/shopifycloud/schemas/v1/tool.json",
     "name": "get_read_rate",
-    "description": "RFID read rate from the latest full store count: raw and adjusted (excluding suspected loose tags) against the 95% target, by category, plus SKUs that come up short count after count (a sign of shrink).",
+    "description": "RFID read rate from the latest weekly inventory scan: raw and adjusted (excluding suspected loose tags) against the 95% target, by category, plus SKUs that come up short scan after scan (a sign of shrink).",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -26,7 +26,7 @@
   {
     "$schema": "https://extensions.shopifycdn.com/shopifycloud/schemas/v1/tool.json",
     "name": "list_loose_tags",
-    "description": "Suspected loose RFID tags (tags still reading after the garment is gone, which hides shrink): counts, hotspot areas, and the most suspicious tags with confidence and the signals behind it.",
+    "description": "Suspected loose RFID tags (RFID-encoded tags still reading after the garment is gone, which hides shrink): counts, hotspot areas, and the most suspicious RFID tags with confidence and the signals behind it.",
     "inputSchema": {
       "type": "object",
       "properties": {
