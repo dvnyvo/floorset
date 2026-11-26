@@ -19,6 +19,7 @@
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
     "seed": "node scripts/seed.ts",
+    "seed-floor-plan": "node scripts/seed-floor-plan.ts",
     "gen-scans": "node scripts/gen-scans.ts",
     "test": "vitest run"
   },
