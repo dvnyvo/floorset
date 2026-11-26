@@ -189,7 +189,15 @@ export async function loadFloorPlan() {
   const openIn = (area: string) => open.filter((s) => s.lastSeenArea === area).length;
   return {
     zones: zones.map((z) => ({ name: z.name, rect: rectOf(z) })),
-    fixtures: fixtures.map((f) => ({ id: f.id, name: f.name, zone: f.zone.name, rect: rectOf(f) })),
+    fixtures: fixtures.map((f) => ({
+      id: f.id,
+      name: f.name,
+      zone: f.zone.name,
+      department: f.zone.department,
+      type: f.type as FixtureType,
+      slotCount: f.slotCount,
+      rect: rectOf(f),
+    })),
     areas: areas.map((a) => ({ name: a.name, label: a.label, rect: rectOf(a), looseTags: openIn(a.name) })),
     looseTags: { open: open.length, likely: open.filter((s) => s.confidence >= 0.7).length },
   };
