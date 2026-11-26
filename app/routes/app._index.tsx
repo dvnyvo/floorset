@@ -113,10 +113,10 @@ export default function Dashboard() {
         </s-table>
       </s-section>
 
-      <s-section heading={`Short ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}>
+      <s-section heading={`Short on ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}>
         <s-paragraph>
-          SKUs that read fewer RFID-encoded tags than Shopify&apos;s on-hand count in each of the last {d.countsCompared} inventory scans. Likely real shrink: check
-          and correct the count.
+          SKUs with fewer RFID tags read than Shopify&apos;s on-hand count on each of the last {d.countsCompared} inventory scans. Likely
+          real shrink: check and correct the count.
         </s-paragraph>
         {d.chronic.length ? (
           <s-unordered-list>

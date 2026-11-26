@@ -170,7 +170,7 @@ function preferenceColor(c: Candidate, prefs: Preferences): RuleResult {
     : fail("pref_color", `${c.colorFamily} isn't one of the requested colors (${prefs.colorFamilies.join(", ")})`);
 }
 
-/** One-line reason, e.g. "Full XXS–XL run, 28 in backstock, fits Zone 2 palette, breaks up two greys, adds a top". */
+/** One-line reason, e.g. "Full XXS–XL run, 28 in backstock, fits Zone 2's palette, breaks up two greys, adds a top". */
 export function explain(
   c: Candidate,
   fixture: FixtureContext,
@@ -181,7 +181,7 @@ export function explain(
   const cadence = cadenceFor(fixture.type, c.category) ?? {};
   const run = SIZES.filter((s) => (cadence[s] ?? 0) > 0);
   const inBack = SIZES.reduce((n, s) => n + (c.back[s] ?? 0), 0);
-  const bits = [`Full ${run[0]}–${run[run.length - 1]} run`, `${inBack} in backstock`, `fits ${fixture.zone.name} palette`];
+  const bits = [`Full ${run[0]}–${run[run.length - 1]} run`, `${inBack} in backstock`, `fits ${fixture.zone.name}'s palette`];
 
   const { left, right } = neighbors(fixture, slot);
   if (left && right && left.colorFamily === right.colorFamily) bits.push(`breaks up two ${left.colorFamily}s`);
