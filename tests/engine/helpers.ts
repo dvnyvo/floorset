@@ -11,7 +11,7 @@ export const deepBack = (): SizeCounts => Object.fromEntries(Object.entries(RAIL
 export function candidate(over: Partial<Candidate> = {}): Candidate {
   return {
     productId: over.productId ?? "p-cand",
-    title: over.title ?? "Test Legging - Lilac",
+    title: over.title ?? "Test Legging - Purple",
     category: "legging",
     role: roleOf(over.category ?? "legging") ?? "top", // from the category unless the test sets it
     department: "womens",

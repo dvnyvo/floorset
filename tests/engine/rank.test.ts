@@ -152,27 +152,30 @@ describe("fallback when nothing has 2x depth", () => {
 });
 
 describe("colorNote", () => {
-  const zone2 = { name: "Zone 2", department: "womens", palette: ["cream", "pink", "lilac", "grey"] as ColorFamily[] };
-  const bright: ColorFamily[] = ["blue", "red", "pink"];
+  const zone2 = { name: "Zone 2", department: "womens", palette: ["beige", "pink", "purple", "grey"] as ColorFamily[] };
+  const bright: ColorFamily[] = ["purple", "red", "pink"];
 
-  it("says when the zone palette leaves one color and the picks don't change", () => {
+  it("says when the zone palette leaves fewer colors and the picks don't change", () => {
     expect(colorNote(bright, zone2, true, "bright")).toBe(
+      "Only purple and pink are both bright and in Zone 2's palette, so the picks are the same as with any color.",
+    );
+    expect(colorNote(["red", "pink"], zone2, true, "bright")).toBe(
       "Only pink is both bright and in Zone 2's palette, so the picks are the same as with any color.",
     );
   });
   it("says when the palette limits the colors even if the picks change", () => {
-    expect(colorNote(["blue", "pink", "lilac"], zone2, false)).toBe("Only pink and lilac of the requested colors are in Zone 2's palette.");
+    expect(colorNote(["navy", "pink", "purple"], zone2, false)).toBe("Only pink and purple of the requested colors are in Zone 2's palette.");
   });
   it("says when no requested color is in the palette", () => {
-    expect(colorNote(["blue", "red"], zone2, false, "bright")).toBe(
-      "None of the bright colors (blue and red) is in Zone 2's palette, so nothing can pass.",
+    expect(colorNote(["navy", "brown"], zone2, false, "dark")).toBe(
+      "None of the dark colors (navy and brown) is in Zone 2's palette, so nothing can pass.",
     );
   });
   it("says when every color fits but the picks are unchanged", () => {
-    expect(colorNote(["cream", "grey"], zone2, true, "light")).toBe("The top picks are already light, so they don't change.");
+    expect(colorNote(["beige", "grey"], zone2, true, "light")).toBe("The top picks are already light, so they don't change.");
   });
   it("stays quiet when the refinement works as expected", () => {
-    expect(colorNote(["cream", "grey"], zone2, false, "light")).toBeNull();
+    expect(colorNote(["beige", "grey"], zone2, false, "light")).toBeNull();
   });
 });
 
@@ -209,7 +212,7 @@ describe("closest options when nothing fits", () => {
   });
 
   it("shows at most topN, best score first", () => {
-    const many = ["red", "blue", "pink", "olive", "navy"].map((c, i) =>
+    const many = ["red", "purple", "pink", "green", "navy"].map((c, i) =>
       candidate({ productId: c, title: c, colorFamily: c as ColorFamily, weeklyVelocity: i + 1 }),
     );
     const closest = rank({ fixture, slot: 1, candidates: many, cadenceFor }).closest;

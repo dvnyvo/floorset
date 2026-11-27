@@ -25,13 +25,13 @@ describe("score parts", () => {
 
   it("counts hue as well as lightness", () => {
     expect(colorDistance("pink", "pink")).toBe(0);
-    expect(colorDistance("lilac", "lilac")).toBe(0);
-    // same lightness, different hue: the old lightness-only score gave 0
-    expect(colorDistance("lilac", "pink")).toBeCloseTo(65 / 180);
-    expect(colorDistance("blue", "red")).toBeGreaterThan(colorDistance("navy", "blue"));
-    expect(colorDistance("pink", "cream")).toBeGreaterThan(0.5); // a hue against a neutral
+    expect(colorDistance("purple", "purple")).toBe(0);
+    // close lightness, different hue: a lightness-only score would give 0.05
+    expect(colorDistance("purple", "red")).toBeCloseTo(Math.hypot(0.05, 85 / 180));
+    expect(colorDistance("navy", "red")).toBeGreaterThan(colorDistance("navy", "purple"));
+    expect(colorDistance("pink", "beige")).toBeGreaterThan(0.5); // a hue against a neutral
     expect(colorDistance("black", "white")).toBe(1); // capped
-    const zone2 = rail([item("pink"), null, item("cream")], ["cream", "pink", "lilac", "grey"]);
-    expect(contrast(candidate({ colorFamily: "lilac" }), zone2, 1)).toBeGreaterThan(0.3);
+    const zone2 = rail([item("pink"), null, item("beige")], ["beige", "pink", "purple", "grey"]);
+    expect(contrast(candidate({ colorFamily: "purple" }), zone2, 1)).toBeGreaterThan(0.3);
   });
 });
