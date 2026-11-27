@@ -13,6 +13,7 @@ export interface MapFixture {
   status: FixtureStatus | null; // null before the first floor scan
   replace: number; // slots to replace
   fill: number; // slots on the fill list
+  changed?: boolean; // has an applied swap that hasn't been undone
 }
 
 export const STATUS_STYLE: Record<FixtureStatus | "none", { fill: string; stroke: string }> = {
@@ -33,6 +34,10 @@ export const shortStatus = (f: Pick<MapFixture, "status" | "replace" | "fill">) 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 function describe(f: MapFixture) {
+  return describeStatus(f) + (f.changed ? ", changed: a swap was applied here" : "");
+}
+
+function describeStatus(f: MapFixture) {
   if (!f.status) return f.name;
   const detail =
     f.status === "replace"
@@ -122,6 +127,10 @@ export function FloorMap({
         const short = f.name.slice(f.zone.length + 1); // "Rail 1"
         const rail = f.rect.w > f.rect.h * 2;
         const ring = f.id === selected || f.id === focused;
+        // The "changed" tag sits outside the fixture so it never covers a label: on a rail's outer edge
+        // (the zone border), above a table (the gap under the top rail, clear of the zone name).
+        const z = zones.find((zz) => zz.name === f.zone)?.rect;
+        const below = rail && !!z && f.rect.y + f.rect.h / 2 > z.y + z.h / 2;
         return (
           <g
             key={f.id}
@@ -148,6 +157,7 @@ export function FloorMap({
               />
             )}
             <rect x={f.rect.x} y={f.rect.y} width={f.rect.w} height={f.rect.h} fill={st.fill} stroke={st.stroke} strokeWidth={0.3} rx={0.5} />
+            {f.changed && <ChangedTag x={f.rect.x + f.rect.w} y={below ? f.rect.y + f.rect.h + 0.4 : f.rect.y - 2.6} />}
             {rail ? (
               <text x={f.rect.x + f.rect.w / 2} y={f.rect.y + f.rect.h / 2 + 0.7} textAnchor="middle" fill={INK} fontSize={1.9}>
                 {short}
@@ -167,6 +177,20 @@ export function FloorMap({
         );
       })}
     </svg>
+  );
+}
+
+/** "changed" pill, right-aligned at x, top at y. */
+function ChangedTag({ x, y }: { x: number; y: number }) {
+  const w = 7.4;
+  const h = 2.2;
+  return (
+    <g aria-hidden>
+      <rect x={x - w} y={y} width={w} height={h} rx={h / 2} fill="#fff" stroke={INK} strokeWidth={0.2} />
+      <text x={x - w / 2} y={y + h / 2 + 0.5} textAnchor="middle" fill={INK} fontSize={1.4} fontWeight={600}>
+        changed
+      </text>
+    </g>
   );
 }
 
@@ -194,6 +218,15 @@ export function FloorMapLegend() {
           style={{ width: 22, height: 14, borderRadius: 7, background: INK }}
         />
         Loose tags found here (count of suspects in a non-sales area)
+      </span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <span
+          aria-hidden
+          style={{ padding: "0 6px", borderRadius: 8, border: `1px solid ${INK}`, fontSize: 11, fontWeight: 600, lineHeight: "16px" }}
+        >
+          changed
+        </span>
+        A swap was applied here (see the fixture&apos;s History to undo it)
       </span>
     </div>
   );
