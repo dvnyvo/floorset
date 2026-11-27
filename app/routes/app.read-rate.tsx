@@ -119,48 +119,56 @@ export default function Dashboard() {
         </s-table>
       </s-section>
 
-      <s-section heading={`Short on ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}>
-        <s-paragraph>
-          SKUs with fewer RFID tags read than Shopify&apos;s on-hand count on each of the last {d.countsCompared} inventory scans. Likely
-          real shrink: check and correct the count.
-        </s-paragraph>
-        {d.chronic.length ? (
-          <s-unordered-list>
-            {(allChronic ? d.chronic : d.chronic.slice(0, SHOWN)).map((r) => (
-              <s-list-item key={r.key}>
-                {r.label}: {r.adjusted} of {r.expected} read
-              </s-list-item>
-            ))}
-          </s-unordered-list>
-        ) : (
-          <s-paragraph>None.</s-paragraph>
-        )}
-        {d.chronic.length > SHOWN && (
-          <s-button variant="tertiary" onClick={() => setAllChronic(!allChronic)}>
-            {allChronic ? `Show first ${SHOWN}` : `Show all (${d.chronic.length})`}
-          </s-button>
-        )}
-      </s-section>
+      {/* Per-SKU detail is for whoever does the recount; it starts closed so the page leads with the totals. */}
+      <s-section heading="SKU details">
+        <details>
+          <summary>
+            Short on {d.countsCompared} inventory scans in a row ({d.chronic.length}) · SKUs below target ({d.flaggedSkuCount})
+          </summary>
+          <s-stack gap="base">
+            <s-heading>{`Short on ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}</s-heading>
+            <s-paragraph>
+              SKUs with fewer RFID tags read than Shopify&apos;s on-hand count on each of the last {d.countsCompared} inventory scans.
+              Likely real shrink: check and correct the count.
+            </s-paragraph>
+            {d.chronic.length ? (
+              <s-unordered-list>
+                {(allChronic ? d.chronic : d.chronic.slice(0, SHOWN)).map((r) => (
+                  <s-list-item key={r.key}>
+                    {r.label}: {r.adjusted} of {r.expected} read
+                  </s-list-item>
+                ))}
+              </s-unordered-list>
+            ) : (
+              <s-paragraph>None.</s-paragraph>
+            )}
+            {d.chronic.length > SHOWN && (
+              <s-button variant="tertiary" onClick={() => setAllChronic(!allChronic)}>
+                {allChronic ? `Show first ${SHOWN}` : `Show all (${d.chronic.length})`}
+              </s-button>
+            )}
 
-      <s-section heading={`SKUs below target (${d.flaggedSkuCount})`}>
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">SKU</s-table-header>
-            <s-table-header format="numeric">On hand</s-table-header>
-            <s-table-header format="numeric">Read</s-table-header>
-            <s-table-header format="numeric">Adjusted rate</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {d.flaggedSkus.map((r) => (
-              <s-table-row key={r.key}>
-                <s-table-cell>{r.label}</s-table-cell>
-                <s-table-cell>{r.expected}</s-table-cell>
-                <s-table-cell>{r.adjusted}</s-table-cell>
-                <s-table-cell>{pct(r.adjustedRate)}</s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
+            <s-heading>{`SKUs below target (${d.flaggedSkuCount})`}</s-heading>
+            <s-table>
+              <s-table-header-row>
+                <s-table-header listSlot="primary">SKU</s-table-header>
+                <s-table-header format="numeric">On hand</s-table-header>
+                <s-table-header format="numeric">Read</s-table-header>
+                <s-table-header format="numeric">Adjusted rate</s-table-header>
+              </s-table-header-row>
+              <s-table-body>
+                {d.flaggedSkus.map((r) => (
+                  <s-table-row key={r.key}>
+                    <s-table-cell>{r.label}</s-table-cell>
+                    <s-table-cell>{r.expected}</s-table-cell>
+                    <s-table-cell>{r.adjusted}</s-table-cell>
+                    <s-table-cell>{pct(r.adjustedRate)}</s-table-cell>
+                  </s-table-row>
+                ))}
+              </s-table-body>
+            </s-table>
+          </s-stack>
+        </details>
       </s-section>
     </s-page>
   );
