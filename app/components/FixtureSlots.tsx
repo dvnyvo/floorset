@@ -1,5 +1,5 @@
 // Slot blocks shared by the fixture view and the floor map's fixture panel: each slot shows its role,
-// the style name and color family, grouped the way the floor is merchandised.
+// the style name and colorway, grouped the way the floor is merchandised.
 import { Fragment, type ReactNode } from "react";
 import { COLORS, type ColorFamily } from "../lib/engine/colors";
 import { roleLabel, slotRoles } from "../lib/engine/roles";
@@ -40,7 +40,8 @@ export function Block({
           {/* The style name says the kind ("Long Sleeve"); the category alone would read "top" in a cover-up slot. */}
           {item.title.split(" - ")[0]}
           <br />
-          {cap(item.colorFamily)}
+          {/* The colorway ("Bone") as the title says it; the family ("Cream") is in the hover text and the fill. */}
+          {item.title.split(" - ")[1] ?? cap(item.colorFamily)}
           {flag && (
             <>
               <br />
