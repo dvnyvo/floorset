@@ -8,7 +8,7 @@ Built from my experience as a stockroom associate in an RFID-tagged apparel stor
 
 ![Floor map: each rail and table colored by what needs attention](docs/screenshots/floor-map.png)
 
-**26-second demo**
+**Demo (26 seconds): how a 96.1% RFID scan hides missing stock, and how Floorset finds it and fixes the rack**
 
 https://github.com/user-attachments/assets/bade499e-638f-4f8f-bd13-3543fecbe957
 
