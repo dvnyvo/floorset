@@ -39,11 +39,17 @@ export default function Dashboard() {
   }
 
   const gap = (d.total.rawRate ?? 0) - (d.total.adjustedRate ?? 0);
+  const looseReads = d.total.raw - d.total.adjusted; // reads in this scan that came from suspected loose tags
   return (
     <s-page heading="Read rate">
       <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
 
       <s-section heading={`Inventory scan · ${d.scan.takenAt.slice(0, 10)}`}>
+        <s-paragraph>
+          The scan found {pct(d.total.rawRate)} of your stock, but {looseReads.toLocaleString()} of those reads are probably loose
+          tags. Real accuracy is {pct(d.total.adjustedRate)}, {(d.total.adjustedRate ?? 0) >= READ_RATE_TARGET ? "above" : "below"} the{" "}
+          {pct(READ_RATE_TARGET)} target.
+        </s-paragraph>
         <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
           <Stat label="Raw read rate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on-hand units read`} />
           <Stat label="Adjusted read rate" value={pct(d.total.adjustedRate)} detail="Excludes suspected loose tags" />

@@ -97,6 +97,9 @@ export default function FloorMapPage() {
       </s-button>
       <s-section heading={d.scanDate ? `Floor scan · ${d.scanDate}` : "No floor scan yet"}>
         <s-stack gap="base">
+          <s-paragraph>
+            Each rail and table on the sales floor, colored by what needs attention. Click one to see its slots.
+          </s-paragraph>
           <s-paragraph>{summary}</s-paragraph>
           {!d.scanDate && (
             <s-banner tone="info">
