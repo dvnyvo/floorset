@@ -50,7 +50,7 @@ export interface Weights {
 export interface Preferences {
   weights?: Partial<Weights>;
   category?: string; // "I want a top"
-  colorFamilies?: ColorFamily[]; // "something brighter" -> ["red", "blue", "pink"]
+  colorFamilies?: ColorFamily[]; // "something brighter" -> ["red", "pink", "purple"]
 }
 
 export interface EngineConfig {

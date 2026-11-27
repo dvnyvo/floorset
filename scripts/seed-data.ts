@@ -5,8 +5,8 @@ import { roleOf, slotRoles, type Role } from "../app/lib/engine/roles.ts";
 export const SIZES = ["XXS", "XS", "S", "M", "L", "XL"] as const;
 export type Size = (typeof SIZES)[number];
 export type ColorFamily =
-  | "black" | "navy" | "espresso" | "burgundy" | "olive" | "blue"
-  | "red" | "grey" | "pink" | "lilac" | "cream" | "white";
+  | "black" | "white" | "navy" | "red" | "pink"
+  | "brown" | "beige" | "grey" | "green" | "purple";
 export type Category = "legging" | "bra" | "top" | "outerwear" | "short" | "jogger";
 export type FixtureType = "rail" | "table";
 export type { Role };
@@ -54,20 +54,18 @@ export function rng(seed: number) {
   };
 }
 
-// Colorway names per color family (a "Midnight" colorway is in the navy family).
+// Basic colors only: each product's color name is its color family's name.
 const COLORS: Record<ColorFamily, string[]> = {
-  black: ["Black", "Onyx"],
-  navy: ["Navy", "Midnight"],
-  espresso: ["Espresso", "Mocha"],
-  burgundy: ["Burgundy", "Merlot"],
-  olive: ["Olive", "Moss"],
-  blue: ["Cobalt", "Ocean"],
-  red: ["Cherry", "Scarlet"],
-  grey: ["Heather Grey", "Slate"],
-  pink: ["Blush", "Rose"],
-  lilac: ["Lilac", "Lavender"],
-  cream: ["Bone", "Ivory"],
-  white: ["White", "Chalk"],
+  black: ["Black"],
+  white: ["White"],
+  navy: ["Navy"],
+  red: ["Red"],
+  pink: ["Pink"],
+  brown: ["Brown"],
+  beige: ["Beige"],
+  grey: ["Grey"],
+  green: ["Green"],
+  purple: ["Purple"],
 };
 const FAMILIES = Object.keys(COLORS) as ColorFamily[];
 
@@ -93,10 +91,10 @@ export const SIZE_CURVE: Record<Size, number> = { XXS: 0.5, XS: 0.8, S: 1.3, M: 
 
 const ZONES: SeedZone[] = [
   { name: "Zone 1", department: "womens", palette: ["black", "grey", "white", "navy"] },
-  { name: "Zone 2", department: "womens", palette: ["cream", "pink", "lilac", "grey"] },
-  { name: "Zone 3", department: "womens", palette: ["black", "red", "blue", "white"] },
-  { name: "Zone 4", department: "womens", palette: ["espresso", "olive", "cream", "burgundy"] },
-  { name: "Men's", department: "mens", palette: ["black", "navy", "grey", "olive", "espresso"] },
+  { name: "Zone 2", department: "womens", palette: ["beige", "pink", "purple", "grey"] },
+  { name: "Zone 3", department: "womens", palette: ["black", "red", "navy", "white"] },
+  { name: "Zone 4", department: "womens", palette: ["brown", "green", "beige", "red"] },
+  { name: "Men's", department: "mens", palette: ["black", "navy", "grey", "green", "brown"] },
 ];
 
 const RAIL_CADENCE: Record<Size, number> = { XXS: 1, XS: 2, S: 3, M: 3, L: 2, XL: 1 };
@@ -107,9 +105,9 @@ const OUTERWEAR_CADENCE: Record<Size, number> = { XXS: 1, XS: 1, S: 2, M: 2, L: 
 // Fill styles give the outfit layout enough tops to complete every fixture. Bench styles stay off the starting
 // layout so Zone 1's swap-outs have replacements.
 const EXTRA_STYLES: { name: string; department: Department; category: Category; kind?: string; families: ColorFamily[]; bench?: boolean }[] = [
-  { name: "Aster", department: "womens", category: "top", kind: "Tank", families: ["white", "red", "blue"] },
-  { name: "Bloom", department: "womens", category: "top", families: ["navy", "grey", "olive"] },
-  { name: "Cobble", department: "mens", category: "top", families: ["black", "navy", "olive"] },
+  { name: "Aster", department: "womens", category: "top", kind: "Tank", families: ["white", "red", "navy"] },
+  { name: "Bloom", department: "womens", category: "top", families: ["navy", "grey", "green"] },
+  { name: "Cobble", department: "mens", category: "top", families: ["black", "navy", "green"] },
   { name: "Halo", department: "womens", category: "top", kind: "Long Sleeve", families: ["grey", "navy", "white"], bench: true },
   { name: "Rook", department: "womens", category: "top", kind: "Tank", families: ["black"], bench: true },
 ];
@@ -170,7 +168,7 @@ export function generate(seed = 42): SeedData {
     const department: Department = i < 38 ? "womens" : "mens";
     const [category, kind] = department === "womens" ? womensCats[i % womensCats.length] : mensCats[i % mensCats.length];
     // Men's colorways lean on their zone's palette so the department has candidates.
-    const familyPool = department === "mens" ? (["black", "navy", "grey", "olive", "espresso", "blue"] as ColorFamily[]) : FAMILIES;
+    const familyPool = department === "mens" ? (["black", "navy", "grey", "green", "brown", "white"] as ColorFamily[]) : FAMILIES;
     for (const family of shuffle([...familyPool]).slice(0, 3)) addProduct(name, i, department, category, kind, family);
   });
 
