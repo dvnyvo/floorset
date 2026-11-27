@@ -6,7 +6,6 @@ A Shopify app that shows an apparel store what's really on its shelves, where st
 
 Built from my experience as a stockroom associate in an RFID-tagged apparel store.
 
-<!-- Placeholder: add the screenshot at docs/screenshots/floor-map.png -->
 ![Floor map: each rail and table colored by what needs attention](docs/screenshots/floor-map.png)
 
 **Short video:** coming soon <!-- Placeholder: link the short video here -->
@@ -27,15 +26,15 @@ Built from my experience as a stockroom associate in an RFID-tagged apparel stor
 
 ## Screenshots
 
-<!-- Placeholders: add these files under docs/screenshots/ -->
-| Page | Screenshot |
+| Screenshot | What it shows |
 | --- | --- |
-| Fixture panel on the floor map | ![Fixture panel](docs/screenshots/fixture-panel.png) |
-| Replacement view for one slot | ![Fixture view](docs/screenshots/fixture-view.png) |
-| Read rate | ![Read rate](docs/screenshots/read-rate.png) |
-| Loose tags | ![Loose tags](docs/screenshots/loose-tags.png) |
-| Closest options when nothing passes | ![Closest options](docs/screenshots/closest-options.png) |
-| Sidekick answering from Floorset | ![Sidekick](docs/screenshots/sidekick.png) |
+| ![Fixture panel](docs/screenshots/fixture-panel.png) | Click a rack to see its slots, what to replace, what to bring out, and its change history. |
+| ![Fixture view](docs/screenshots/fixture-view.png) | A replacement that fits the outfit order and zone colors, with the reason it was picked. |
+| ![Closest options](docs/screenshots/closest-options.png) | When nothing fits, the closest options and the one rule each breaks. |
+| ![Read rate](docs/screenshots/read-rate.png) | The scan said 96.1%; with loose tags removed, real accuracy is 92.3%. |
+| ![Loose tags](docs/screenshots/loose-tags.png) | Where cut-off tags are being dumped, and why each one was flagged. |
+| ![Replenishment](docs/screenshots/replenishment.png) | This morning's floor scan: what to replace and what to bring out. |
+| ![Sidekick](docs/screenshots/sidekick.png) | Shopify's Sidekick answering from Floorset's data. |
 
 ## For engineers
 
