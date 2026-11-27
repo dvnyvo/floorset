@@ -4,6 +4,7 @@ import { useFetcher, useLoaderData } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
+import db from "../db.server";
 import { saveLooseTags } from "../lib/summaries.server";
 import { loadGhosts, resolveSuspect, runDetection, type Resolution } from "../lib/ghosts.server";
 import { approveAndApply, ProposalError, rejectProposal, undoProposal } from "../lib/proposals.server";
@@ -13,7 +14,9 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
   const g = await loadGhosts(admin);
   await saveLooseTags(g);
-  return g;
+  // Zone names, so the hotspot table can show the sales floor as one row next to the non-sales areas.
+  const zones = (await db.zone.findMany({ select: { name: true } })).map((z) => z.name);
+  return { ...g, zones };
 };
 
 const RESOLUTIONS: Resolution[] = ["loose_tag", "item_found", "not_found"];
@@ -92,6 +95,14 @@ export default function Ghosts() {
   const areas = new Map<string, typeof d.open>();
   for (const s of d.open) areas.set(s.area ?? "Unknown", [...(areas.get(s.area ?? "Unknown") ?? []), s]);
   const pending = d.corrections.filter((c) => c.status === "pending");
+  // Hotspots: every zone folds into one "Sales floor" row; the non-sales areas keep their own rows.
+  const hotspots = new Map<string, { area: string; open: number; confirmed: number }>();
+  for (const h of d.hotspots) {
+    const area = d.zones.includes(h.area) ? "Sales floor" : h.area;
+    const row = hotspots.get(area) ?? { area, open: 0, confirmed: 0 };
+    hotspots.set(area, { area, open: row.open + h.open, confirmed: row.confirmed + h.confirmed });
+  }
+  const hotspotRows = [...hotspots.values()].sort((a, b) => b.open + b.confirmed - (a.open + a.confirmed));
 
   const applyAll = () => {
     const fd = new FormData();
@@ -107,6 +118,7 @@ export default function Ghosts() {
       </s-button>
 
       <s-section>
+        <s-paragraph>RFID-encoded tags that are still reading after their garment left the store, usually from theft.</s-paragraph>
         <s-paragraph>
           An RFID-encoded tag that keeps reading after its garment is gone hides shrink: the read rate still counts it and Shopify still
           shows it as sellable. These tags are excluded from the adjusted read rate and from floor counts until resolved.
@@ -120,7 +132,7 @@ export default function Ghosts() {
       </s-section>
 
       <s-section heading="Hotspots">
-        {d.hotspots.length ? (
+        {hotspotRows.length ? (
           <s-table>
             <s-table-header-row>
               <s-table-header listSlot="primary">Area</s-table-header>
@@ -128,7 +140,7 @@ export default function Ghosts() {
               <s-table-header format="numeric">Confirmed</s-table-header>
             </s-table-header-row>
             <s-table-body>
-              {d.hotspots.map((h) => (
+              {hotspotRows.map((h) => (
                 <s-table-row key={h.area}>
                   <s-table-cell>{h.area}</s-table-cell>
                   <s-table-cell>{h.open}</s-table-cell>
@@ -158,7 +170,9 @@ export default function Ghosts() {
                     <s-stack gap="small-300">
                       <s-text>{s.title}</s-text>
                       <s-text color="subdued">
-                        {s.sku} · {s.epc}
+                        <small>
+                          {s.sku} · {s.epc}
+                        </small>
                       </s-text>
                     </s-stack>
                   </s-table-cell>

@@ -2,11 +2,47 @@
 
 [![CI](https://github.com/dvnyvo/floorset/actions/workflows/ci.yml/badge.svg)](https://github.com/dvnyvo/floorset/actions/workflows/ci.yml)
 
+A Shopify app that shows an apparel store what's really on its shelves, where stock is quietly going missing, and what each rack needs next.
+
+<!-- Placeholder: add the screenshot at docs/screenshots/floor-map.png -->
+![Floor map: each rail and table colored by what needs attention](docs/screenshots/floor-map.png)
+
+**Video walkthrough:** coming soon <!-- Placeholder: link a 2-minute walkthrough here -->
+
+## What it does
+
+- **Finds stock that's missing even when the count looks fine.** RFID scans say 96.1% of stock is there; once tags left behind by theft are taken out, it's 92.3%.
+- **Shows where stolen items' tags are being dumped** (fitting room, cash wrap, entrance, back corridor) and proposes the matching inventory fix in Shopify.
+- **Tells floor staff what to refill and what to replace on each rack,** with a plain-English reason for every pick. Nothing changes in Shopify until a person approves it, and every change can be undone.
+
+## 30-second glossary
+
+- **RFID-encoded tag.** A tag in each garment with its own ID (its EPC), which a handheld reader picks up without needing to see it.
+- **Read rate.** The share of the stock Shopify says is on hand that an RFID scan actually found; the target is 95%.
+- **Loose tag.** An RFID-encoded tag that still reads after its garment has left the store, usually because it was cut off during a theft.
+- **Size run / swap-out.** The sizes a fixture shows for one item, for example 1 XXS, 2 XS, 3 S, 3 M, 2 L and 1 XL on a rail. An item whose size run can't be refilled from backstock, so it's replaced with a different item that can.
+- **Backstock.** Stock kept in the stockroom, used to refill the sales floor.
+
+## Screenshots
+
+<!-- Placeholders: add these files under docs/screenshots/ -->
+| Page | Screenshot |
+| --- | --- |
+| Floor map | ![Floor map](docs/screenshots/floor-map.png) |
+| Fixture panel on the floor map | ![Fixture panel](docs/screenshots/fixture-panel.png) |
+| Replacement view for one slot | ![Fixture view](docs/screenshots/fixture-view.png) |
+| Read rate | ![Read rate](docs/screenshots/read-rate.png) |
+| Loose tags | ![Loose tags](docs/screenshots/loose-tags.png) |
+| Closest options when nothing passes | ![Closest options](docs/screenshots/closest-options.png) |
+| Sidekick answering from Floorset | ![Sidekick](docs/screenshots/sidekick.png) |
+
+## For engineers
+
 An embedded Shopify app for the sales floor of an apparel store. It reconciles RFID scans against Shopify inventory, finds shrink that loose tags are hiding, and recommends on-standard replacements for fixtures that can no longer hold a full size run. Every change it makes to Shopify goes through propose → approve → apply → audit log → undo.
 
 Built on synthetic data for a mid-size apparel retailer scenario (see [Synthetic data](#synthetic-data)).
 
-## The problem
+### The problem
 
 Stores that tag every unit with RFID still run into three gaps that Shopify's inventory model doesn't cover on its own:
 
@@ -14,7 +50,7 @@ Stores that tag every unit with RFID still run into three gaps that Shopify's in
 2. **Broken size runs stay on the floor.** A style that's out of S and M in backstock still occupies its rail. Someone has to notice, then pick a replacement that has a full run, enough depth, and fits the zone's colors and the fixture's mix.
 3. **Fixes are manual and untracked.** Inventory corrections and floor changes happen without a record of who changed what, or a way to reverse it.
 
-## What it does
+### Pages
 
 | Page | What it shows |
 | --- | --- |
@@ -28,7 +64,7 @@ Stores that tag every unit with RFID still run into three gaps that Shopify's in
 
 An optional Claude copilot on the fixture view turns requests like "something brighter, not a legging" into ranking preferences. It can only propose items the rules engine already passed.
 
-## Demo (5 minutes)
+### Demo (5 minutes)
 
 1. **Read rate.** The store reads 96.1%, above the 95% target. With suspected loose tags taken out it reads 92.3%: 3.8 points of shrink the headline number hides. The chart shows the adjusted rate holding near 96% for six counts and then falling as loose tags pile up, while bras slide from 95% to 89%.
 2. **Loose tags.** 255 suspects, almost all in four spots where no stock belongs: the fitting room, an entrance corner, the cash wrap and a back corridor. Mark one "RFID tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
@@ -36,7 +72,7 @@ An optional Claude copilot on the fixture view turns requests like "something br
 4. **Fixture view.** The before row shows the rail grouped into outfits, each slot labelled with the role it needs; the after row shows it with the top pick. Each pick says why in plain English (size run, backstock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap. Zone 1 Rail 1, slot 2 has no valid pick; it lists the closest options instead, each labeled with the one rule it breaks.
 5. **Sidekick.** Ask "Which floor items need replacing?" and follow the link back to the fixture view.
 
-## Architecture
+### Architecture
 
 ```mermaid
 flowchart LR
@@ -74,7 +110,7 @@ flowchart LR
 
 Shopify stays the source of truth for products and counts. The app database holds what Shopify doesn't model: the floor layout, size cadences, one row per RFID tag, raw scan reads, read-rate snapshots, daily sales, loose-tag suspects, proposals, and the audit log.
 
-## Design decisions
+### Design decisions
 
 - **A deterministic rules engine, with the LLM kept at the edge.** Ranking is pure functions: stock rules (full size run, 2× depth, not damaged, fixture type, department), then preferences, then visual standards (outfit role, zone palette, color adjacency), then a weighted score. The engine is unit-tested and explainable. The copilot can only change preferences, which narrow or re-weight; it can't loosen a rule, and its propose tool rejects anything outside the engine's current picks.
 - **Fixtures are merchandised as outfits.** Every 3 rail slots form one outfit, and each slot needs a role: top (bra, tank, tee, shirt), bottom (legging, short, jogger, trouser) or cover-up (jacket, long sleeve, hoodie, all outerwear). Women's rails run top → bottom → cover-up, men's run cover-up → top → bottom. Tables take tops and non-outerwear cover-ups on the left half and bottoms on the right; outerwear never goes on a table. Role is its own product metafield, separate from category: a long sleeve is a top by category and a cover-up by role. A wrong-role item is rejected with the slot's rule ("Slot 3 is a cover-up slot (top → bottom → cover-up)"). The sequence already limits each role per fixture, so there is no separate per-category cap.
@@ -89,7 +125,7 @@ Shopify stays the source of truth for products and counts. The app database hold
 - **Read-rate history as snapshots.** When an inventory scan is uploaded, the rate per category is frozen against on-hand at that moment. The trend chart reads those few rows and never re-reads old scans or guesses past inventory.
 - **No action extension.** Sidekick action intents are a fixed list of types, none of which fits "fixture swap". Rather than mislabel it, the swap-out tool returns a link to the fixture view, where the swap is staged and approved.
 
-## Results on the synthetic data
+### Results on the synthetic data
 
 | Check | Result |
 | --- | --- |
@@ -99,7 +135,7 @@ Shopify stays the source of truth for products and counts. The app database hold
 | Swap-outs | 8 found; 7 have valid replacements. 1 (Zone 1 Rail 1, slot 2) is planted with no valid pick and shows 3 closest options |
 | Write path | Propose → apply → undo verified against a dev store for both metafield swaps and inventory corrections |
 
-## What I'd change at scale
+### What I'd change at scale
 
 - **Multi-store and multi-location.** Add a `shop` column to every table and a location picker. Today it's single-store with the first location.
 - **Sync instead of cache.** The catalog cache is in memory and dropped whole on any change. At scale, sync the catalog into the database with bulk operations and apply webhooks row by row.
@@ -110,13 +146,21 @@ Shopify stays the source of truth for products and counts. The app database hold
 - **Summaries on a schedule.** Sidekick summaries refresh when a page loads; a scheduled job would keep them fresh.
 - **Postgres and hosting.** SQLite is fine for one store. Proposals and audit rows would move to Postgres with row-level locking, and the app would be deployed from the included Dockerfile. It currently runs only through `shopify app dev`.
 
-## Future work
+### Future work
 
 - **Signal weights that learn.** The loose-tag signal weights are fixed. The app records every false alarm ("item found") but does not yet use them; the next step is to lower a signal's weight as its false alarms add up.
 - **A Sidekick action.** Sidekick can read from Floorset but cannot stage a swap; it links to the fixture view instead.
 - **Deployment.** Not hosted anywhere yet.
 
-## Running locally
+### Tests
+
+```sh
+npm test            # Vitest: rules engine, scan parsing (incl. the generated files), reconciliation, loose-tag detection, sales rollup
+npm run typecheck
+npm run lint
+```
+
+### Running locally
 
 Requires Node 22.12+, the Shopify CLI, a Partner account and a development store.
 
@@ -132,12 +176,6 @@ Then upload the CSVs from `scans/` on the **Scans** page, oldest first. `scans/m
 
 The copilot is optional. Add `ANTHROPIC_API_KEY=...` to `.env` to show it.
 
-```sh
-npm test            # Vitest: rules engine, scan parsing (incl. the generated files), reconciliation, loose-tag detection, sales rollup
-npm run typecheck
-npm run lint
-```
-
-## Synthetic data
+### Synthetic data
 
 All products, colors, zones, cadences, stock, sales and scans are generated by a seeded generator in `scripts/`. The planted problems (bra theft that builds week by week, loose tags dumped in the fitting room, an entrance corner, the cash wrap and a back corridor, sold items whose tags still read, broken size runs) are recorded in `scans/truth.json` so detection can be scored. No real company data, figures or system names are used.

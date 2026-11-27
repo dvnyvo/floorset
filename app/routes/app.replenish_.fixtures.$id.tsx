@@ -163,9 +163,9 @@ const COLOR_KINDS = ["dark", "light", "bright"] as const; // the Darker / Lighte
 
 // What each score part measures, worded to match the engine (score.ts).
 const SCORE_PARTS = [
-  ["contrast", "Contrast", "how different its color is from its neighbors, in hue and lightness"],
-  ["velocity", "Velocity", "sales vs the fastest seller in its category, across the whole catalog"],
-  ["cover", "Cover", "weeks of sales the backstock covers, full at 4+ weeks"],
+  ["contrast", "Stands out from neighbors", "how different its color is from its neighbors, in hue and lightness"],
+  ["velocity", "Sells well", "sales vs the fastest seller in its category, across the whole catalog"],
+  ["cover", "Enough backstock", "weeks of sales the backstock covers, full at 4+ weeks"],
 ] as const;
 
 const STATUS_TONE = {
@@ -529,39 +529,43 @@ export default function FixtureView() {
       </s-section>
 
       <s-section heading={`Rejected (${d.rejected.length})`}>
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Item</s-table-header>
-            <s-table-header>Stage</s-table-header>
-            <s-table-header>Why</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {rejected.map((x) => (
-              <s-table-row key={x.productId}>
-                <s-table-cell>{x.title}</s-table-cell>
-                <s-table-cell>
-                  <s-badge
-                    tone={
-                      x.stage === "visual"
-                        ? "warning"
-                        : x.stage === "preference"
-                          ? "info"
-                          : "neutral"
-                    }
-                  >
-                    {x.stage}
-                  </s-badge>
-                </s-table-cell>
-                <s-table-cell>{x.reason}</s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
-        {d.rejected.length > REJECTED_SHOWN && (
-          <s-button variant="tertiary" onClick={() => setAllRejected(!allRejected)}>
-            {allRejected ? `Show first ${REJECTED_SHOWN}` : `Show all (${d.rejected.length})`}
-          </s-button>
-        )}
+        {/* Closed by default: the picks are the answer; rejections are there to check the rules. */}
+        <details>
+          <summary>Why the other items didn&apos;t pass</summary>
+          <s-table>
+            <s-table-header-row>
+              <s-table-header listSlot="primary">Item</s-table-header>
+              <s-table-header>Stage</s-table-header>
+              <s-table-header>Why</s-table-header>
+            </s-table-header-row>
+            <s-table-body>
+              {rejected.map((x) => (
+                <s-table-row key={x.productId}>
+                  <s-table-cell>{x.title}</s-table-cell>
+                  <s-table-cell>
+                    <s-badge
+                      tone={
+                        x.stage === "visual"
+                          ? "warning"
+                          : x.stage === "preference"
+                            ? "info"
+                            : "neutral"
+                      }
+                    >
+                      {x.stage}
+                    </s-badge>
+                  </s-table-cell>
+                  <s-table-cell>{x.reason}</s-table-cell>
+                </s-table-row>
+              ))}
+            </s-table-body>
+          </s-table>
+          {d.rejected.length > REJECTED_SHOWN && (
+            <s-button variant="tertiary" onClick={() => setAllRejected(!allRejected)}>
+              {allRejected ? `Show first ${REJECTED_SHOWN}` : `Show all (${d.rejected.length})`}
+            </s-button>
+          )}
+        </details>
       </s-section>
     </s-page>
   );

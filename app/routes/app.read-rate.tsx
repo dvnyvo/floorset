@@ -8,6 +8,8 @@ import { loadDashboard } from "../lib/floor.server";
 import { READ_RATE_TARGET, type RateRow } from "../lib/scans/reconcile";
 import { ReadRateChart } from "../components/ReadRateChart";
 import { cap, pct } from "../lib/format";
+import { Info } from "../components/Info";
+import type { GlossaryKey } from "../lib/glossary";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -39,16 +41,24 @@ export default function Dashboard() {
   }
 
   const gap = (d.total.rawRate ?? 0) - (d.total.adjustedRate ?? 0);
+  const looseReads = d.total.raw - d.total.adjusted; // reads in this scan that came from suspected loose tags
   return (
     <s-page heading="Read rate">
       <s-button slot="primary-action" variant="primary" href="/app/scans">Upload a scan</s-button>
 
       <s-section heading={`Inventory scan · ${d.scan.takenAt.slice(0, 10)}`}>
+        <s-paragraph>
+          The scan found {pct(d.total.rawRate)} of your stock, but {looseReads.toLocaleString()} of those reads are probably loose
+          tags <Info term="looseTag" />. Real accuracy is {pct(d.total.adjustedRate)}, {(d.total.adjustedRate ?? 0) >= READ_RATE_TARGET ? "above" : "below"} the{" "}
+          {pct(READ_RATE_TARGET)} target.
+        </s-paragraph>
         <s-grid gridTemplateColumns="repeat(auto-fit, minmax(160px, 1fr))" gap="base">
-          <Stat label="Raw read rate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on-hand units read`} />
+          <Stat label="Raw read rate" info="readRate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on-hand units read`} />
           <Stat label="Adjusted read rate" value={pct(d.total.adjustedRate)} detail="Excludes suspected loose tags" />
-          <Stat label="Hidden shrink" value={`${(gap * 100).toFixed(1)} pts`} detail={`${d.ghostCount} suspected loose tags`} />
-          <Stat label="Unknown RFID tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
+          <Stat label="Likely missing" value={`${pct(gap)} of stock`} detail={`${looseReads.toLocaleString()} items`} />
+          {d.unknownEpcs > 0 && (
+            <Stat label="Unknown RFID tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
+          )}
         </s-grid>
       </s-section>
 
@@ -113,48 +123,56 @@ export default function Dashboard() {
         </s-table>
       </s-section>
 
-      <s-section heading={`Short on ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}>
-        <s-paragraph>
-          SKUs with fewer RFID tags read than Shopify&apos;s on-hand count on each of the last {d.countsCompared} inventory scans. Likely
-          real shrink: check and correct the count.
-        </s-paragraph>
-        {d.chronic.length ? (
-          <s-unordered-list>
-            {(allChronic ? d.chronic : d.chronic.slice(0, SHOWN)).map((r) => (
-              <s-list-item key={r.key}>
-                {r.label}: {r.adjusted} of {r.expected} read
-              </s-list-item>
-            ))}
-          </s-unordered-list>
-        ) : (
-          <s-paragraph>None.</s-paragraph>
-        )}
-        {d.chronic.length > SHOWN && (
-          <s-button variant="tertiary" onClick={() => setAllChronic(!allChronic)}>
-            {allChronic ? `Show first ${SHOWN}` : `Show all (${d.chronic.length})`}
-          </s-button>
-        )}
-      </s-section>
+      {/* Per-SKU detail is for whoever does the recount; it starts closed so the page leads with the totals. */}
+      <s-section heading="SKU details">
+        <details>
+          <summary>
+            Short on {d.countsCompared} inventory scans in a row ({d.chronic.length}) · SKUs below target ({d.flaggedSkuCount})
+          </summary>
+          <s-stack gap="base">
+            <s-heading>{`Short on ${d.countsCompared} inventory scans in a row (${d.chronic.length})`}</s-heading>
+            <s-paragraph>
+              SKUs with fewer RFID tags read than Shopify&apos;s on-hand count on each of the last {d.countsCompared} inventory scans.
+              Likely real shrink: check and correct the count.
+            </s-paragraph>
+            {d.chronic.length ? (
+              <s-unordered-list>
+                {(allChronic ? d.chronic : d.chronic.slice(0, SHOWN)).map((r) => (
+                  <s-list-item key={r.key}>
+                    {r.label}: {r.adjusted} of {r.expected} read
+                  </s-list-item>
+                ))}
+              </s-unordered-list>
+            ) : (
+              <s-paragraph>None.</s-paragraph>
+            )}
+            {d.chronic.length > SHOWN && (
+              <s-button variant="tertiary" onClick={() => setAllChronic(!allChronic)}>
+                {allChronic ? `Show first ${SHOWN}` : `Show all (${d.chronic.length})`}
+              </s-button>
+            )}
 
-      <s-section heading={`SKUs below target (${d.flaggedSkuCount})`}>
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">SKU</s-table-header>
-            <s-table-header format="numeric">On hand</s-table-header>
-            <s-table-header format="numeric">Read</s-table-header>
-            <s-table-header format="numeric">Adjusted rate</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {d.flaggedSkus.map((r) => (
-              <s-table-row key={r.key}>
-                <s-table-cell>{r.label}</s-table-cell>
-                <s-table-cell>{r.expected}</s-table-cell>
-                <s-table-cell>{r.adjusted}</s-table-cell>
-                <s-table-cell>{pct(r.adjustedRate)}</s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
+            <s-heading>{`SKUs below target (${d.flaggedSkuCount})`}</s-heading>
+            <s-table>
+              <s-table-header-row>
+                <s-table-header listSlot="primary">SKU</s-table-header>
+                <s-table-header format="numeric">On hand</s-table-header>
+                <s-table-header format="numeric">Read</s-table-header>
+                <s-table-header format="numeric">Adjusted rate</s-table-header>
+              </s-table-header-row>
+              <s-table-body>
+                {d.flaggedSkus.map((r) => (
+                  <s-table-row key={r.key}>
+                    <s-table-cell>{r.label}</s-table-cell>
+                    <s-table-cell>{r.expected}</s-table-cell>
+                    <s-table-cell>{r.adjusted}</s-table-cell>
+                    <s-table-cell>{pct(r.adjustedRate)}</s-table-cell>
+                  </s-table-row>
+                ))}
+              </s-table-body>
+            </s-table>
+          </s-stack>
+        </details>
       </s-section>
     </s-page>
   );
@@ -162,11 +180,14 @@ export default function Dashboard() {
 
 const SHOWN = 10; // chronic shorts listed before "Show all"
 
-function Stat({ label, value, detail }: { label: string; value: string; detail: string }) {
+function Stat({ label, value, detail, info }: { label: string; value: string; detail: string; info?: GlossaryKey }) {
   return (
     <s-box padding="base" borderWidth="base" borderRadius="base">
       <s-stack direction="block" gap="small-200">
-        <s-text color="subdued">{label}</s-text>
+        <s-stack direction="inline" gap="small-300" alignItems="center">
+          <s-text color="subdued">{label}</s-text>
+          {info && <Info term={info} />}
+        </s-stack>
         <s-heading>{value}</s-heading>
         <s-text color="subdued">{detail}</s-text>
       </s-stack>
