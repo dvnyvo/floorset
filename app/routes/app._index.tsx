@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
+import { useEffect, useRef } from "react";
+import type { HeadersFunction, LoaderFunctionArgs, ShouldRevalidateFunction } from "react-router";
+import { useLoaderData, useSearchParams } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 import { loadFloorPlan, loadReplenishment } from "../lib/floor.server";
@@ -57,7 +57,10 @@ const plural = (n: number, one: string, many: string) => `${n.toLocaleString()} 
 
 export default function FloorMapPage() {
   const d = useLoaderData<typeof loader>();
-  const [selected, setSelected] = useState<string | null>(null);
+  // The open fixture lives in the URL (?fixture=ID), so coming back from the replacement view reopens it.
+  const [params, setParams] = useSearchParams();
+  const selected = params.get("fixture");
+  const setSelected = (id: string) => setParams({ fixture: id }, { replace: true, preventScrollReset: true });
   const fixture = d.fixtures.find((f) => f.id === selected) ?? null;
   const panel = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -161,7 +164,7 @@ function FixturePanel({ fixture: f, hasScan }: { fixture: PanelFixture; hasScan:
                     </s-text>
                     <s-text>{s.reason}</s-text>
                   </s-stack>
-                  <s-button href={`/app/replenish/fixtures/${f.id}?slot=${s.slot}`}>Open replacement view</s-button>
+                  <s-button href={`/app/replenish/fixtures/${f.id}?slot=${s.slot}&from=map`}>Open replacement view</s-button>
                 </s-stack>
               </s-box>
             ))}
@@ -187,5 +190,9 @@ function FixturePanel({ fixture: f, hasScan }: { fixture: PanelFixture; hasScan:
     </s-section>
   );
 }
+
+// Opening a fixture only changes ?fixture=; the floor data is the same, so skip the reload.
+export const shouldRevalidate: ShouldRevalidateFunction = ({ currentUrl, nextUrl, formMethod, defaultShouldRevalidate }) =>
+  !formMethod && currentUrl.pathname === nextUrl.pathname ? false : defaultShouldRevalidate;
 
 export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);

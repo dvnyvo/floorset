@@ -70,6 +70,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     note = colorNote(prefs.colorFamilies, fx.fixture.zone, ids(anyColor.picks) === ids(r.picks), kind);
   }
   return {
+    fixtureId: fx.id,
     fixture: fx.fixture,
     slot,
     prefs,
@@ -245,9 +246,15 @@ export default function FixtureView() {
 
   return (
     <s-page heading={`${d.fixture.name} · slot ${d.slot + 1}`}>
-      <s-link slot="breadcrumb-actions" href="/app/replenish">
-        Replenishment
-      </s-link>
+      {params.get("from") === "map" ? (
+        <s-link slot="breadcrumb-actions" href={`/app?fixture=${d.fixtureId}`}>
+          Floor map
+        </s-link>
+      ) : (
+        <s-link slot="breadcrumb-actions" href="/app/replenish">
+          Replenishment
+        </s-link>
+      )}
 
       <s-section heading={`Before and after · ${d.fixture.name}`}>
         <s-stack gap="small">
