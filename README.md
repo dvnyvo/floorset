@@ -40,7 +40,7 @@ When nothing fits, as on Zone 1 Rail 2, slot 2, the view lists the closest optio
 
 <img src="docs/screenshots/sidekick.png" width="320" alt="Sidekick answering from Floorset">
 
-## Results
+## Results (on synthetic test data)
 
 - **255 of 277 planted loose tags flagged, 0 false alarms.**
 - **The scan reads 96.1%, but real accuracy is 92.3%.**
