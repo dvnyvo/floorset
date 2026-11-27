@@ -41,7 +41,7 @@ export interface SeedData {
   placements: SeedPlacement[];
   units: SeedUnit[];
   sales: SeedSale[];
-  planted: { brokenRuns: string[]; sameColorRail: string };
+  planted: { brokenRuns: string[] };
 }
 
 // mulberry32: tiny seeded PRNG so every run produces the same store.
@@ -210,7 +210,9 @@ export function generate(seed = 42): SeedData {
     cadenceRules.find((c) => c.fixtureType === ft && c.category === cat)!.sizeCounts;
 
   // --- Placements: greedy, obeying department, palette, fixture type, adjacency and the outfit sequence ---
-  const SAME_COLOR_RAIL = "Zone 1 Rail 2"; // planted violation: two same-family neighbors
+  // The draw once planted two same-color neighbors on this rail. It still steers the draw, so every later draw lands
+  // where it did; the trade after the loop clears it.
+  const SAME_COLOR_RAIL = "Zone 1 Rail 2";
   const placed = new Set<string>();
   const placements: SeedPlacement[] = [];
   const placedOn = new Map<string, FixtureType>(); // handle -> fixture type it sits on
@@ -242,6 +244,14 @@ export function generate(seed = 42): SeedData {
       placements.push({ fixture: f.name, slot, handle: p.handle });
     }
   }
+  // Zone 1's rails trade their first top and bottom, so no rail has same-color neighbors. Same products, fixture
+  // type, zone and swap-outs, so stock, sales and scans don't change.
+  const at = (fixture: string, slot: number) => placements.find((p) => p.fixture === fixture && p.slot === slot)!;
+  for (const slot of [0, 1]) {
+    const a = at("Zone 1 Rail 1", slot);
+    const b = at("Zone 1 Rail 2", slot);
+    [a.handle, b.handle] = [b.handle, a.handle];
+  }
 
   // Bench styles join the catalog after the layout, so none of them start on the floor.
   addExtras(true);
@@ -255,7 +265,7 @@ export function generate(seed = 42): SeedData {
     for (let i = 0; i < n; i++) units.push({ epc: nextEpc(), sku, area, status });
   };
 
-  // Planted: 8 placed products whose back stock ran out in 1-2 sizes -> swap-outs, at fixed slots. Zone 1 Rail 1
+  // Planted: 8 placed products whose back stock ran out in 1-2 sizes -> swap-outs, at fixed slots. Zone 1 Rail 2
   // slot 2 is the deliberate dead end: no unplaced bottom in Zone 1's palette fits between its neighbors.
   const brokenRuns = BROKEN_RUN_SLOTS.map(([fixture, slot]) => placements.find((p) => p.fixture === fixture && p.slot === slot)!.handle);
   for (const p of products) {
@@ -307,7 +317,7 @@ export function generate(seed = 42): SeedData {
     placements,
     units,
     sales,
-    planted: { brokenRuns, sameColorRail: SAME_COLOR_RAIL },
+    planted: { brokenRuns },
   };
   selfCheck(data);
   return data;
@@ -334,13 +344,11 @@ function selfCheck(d: SeedData) {
     assert(slotRoles(f.type, z.department, f.slotCount)[pl.slot].includes(p.role), `${p.handle} has the role ${f.name} slot ${pl.slot + 1} needs`);
     assert(!(f.type === "table" && p.category === "outerwear"), `no outerwear on ${f.name}`);
   }
-  const dup = d.placements.filter((p) => p.fixture === d.planted.sameColorRail).sort((a, b) => a.slot - b.slot);
+  // No same-color neighbors anywhere, merged colors (blue into navy, burgundy into red) included.
   const fam = (h: string) => d.products.find((p) => p.handle === h)!.colorFamily;
-  assert(dup.length >= 3 && fam(dup[1].handle) === fam(dup[2].handle), "planted same-color neighbors");
-  // Merged colors (blue into navy, burgundy into red) must not create any other same-color neighbors.
   for (const f of d.fixtures) {
     const on = d.placements.filter((p) => p.fixture === f.name).sort((a, b) => a.slot - b.slot);
     const same = on.slice(1).filter((p, i) => fam(p.handle) === fam(on[i].handle)).length;
-    assert(same === (f.name === d.planted.sameColorRail ? 1 : 0), `${f.name} same-color neighbors: ${same}`);
+    assert(same === 0, `${f.name} same-color neighbors: ${same}`);
   }
 }
