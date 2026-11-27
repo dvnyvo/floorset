@@ -6,7 +6,6 @@ A Shopify app that shows an apparel store what's really on its shelves, where st
 
 Built from my experience as a stockroom associate in an RFID-tagged apparel store.
 
-<!-- Placeholder: add the screenshot at docs/screenshots/floor-map.png -->
 ![Floor map: each rail and table colored by what needs attention](docs/screenshots/floor-map.png)
 
 **Short video:** coming soon <!-- Placeholder: link the short video here -->
@@ -27,15 +26,33 @@ Built from my experience as a stockroom associate in an RFID-tagged apparel stor
 
 ## Screenshots
 
-<!-- Placeholders: add these files under docs/screenshots/ -->
-| Page | Screenshot |
-| --- | --- |
-| Fixture panel on the floor map | ![Fixture panel](docs/screenshots/fixture-panel.png) |
-| Replacement view for one slot | ![Fixture view](docs/screenshots/fixture-view.png) |
-| Read rate | ![Read rate](docs/screenshots/read-rate.png) |
-| Loose tags | ![Loose tags](docs/screenshots/loose-tags.png) |
-| Closest options when nothing passes | ![Closest options](docs/screenshots/closest-options.png) |
-| Sidekick answering from Floorset | ![Sidekick](docs/screenshots/sidekick.png) |
+**Click a rack to see its slots, what to replace, what to bring out, and its change history.**
+
+<img src="docs/screenshots/fixture-panel.png" width="800" alt="Fixture panel">
+
+**A replacement that fits the outfit order and zone colors, with the reason it was picked.**
+
+<img src="docs/screenshots/fixture-view.png" width="800" alt="Fixture view">
+
+**When nothing fits, the closest options and the one rule each breaks.**
+
+<img src="docs/screenshots/closest-options.png" width="800" alt="Closest options">
+
+**The scan said 96.1%; with loose tags removed, real accuracy is 92.3%.**
+
+<img src="docs/screenshots/read-rate.png" width="800" alt="Read rate">
+
+**Where cut-off tags are being dumped, and why each one was flagged.**
+
+<img src="docs/screenshots/loose-tags.png" width="800" alt="Loose tags">
+
+**This morning's floor scan: what to replace and what to bring out.**
+
+<img src="docs/screenshots/replenishment.png" width="800" alt="Replenishment">
+
+**Shopify's Sidekick answering from Floorset's data.**
+
+<img src="docs/screenshots/sidekick.png" width="320" alt="Sidekick">
 
 ## For engineers
 
