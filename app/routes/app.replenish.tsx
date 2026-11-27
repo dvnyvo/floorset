@@ -7,6 +7,7 @@ import { loadReplenishment } from "../lib/floor.server";
 import { SIZES, type SizeCounts } from "../lib/engine/types";
 import { onFillList } from "../lib/engine/status";
 import { sizeList } from "../lib/format";
+import { Info } from "../components/Info";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -103,8 +104,8 @@ export default function Replenish() {
     <s-page heading="Floor replenishment">
       <s-section heading={`Floor scan · ${scan.takenAt.slice(0, 10)}`}>
         <s-paragraph>
-          {swapOuts.length} items can&apos;t hold their size run and need a replacement. {fills.length} items need{" "}
-          {units} units brought out from backstock.
+          {swapOuts.length} items can&apos;t hold their size run <Info term="sizeRun" /> and need a replacement{" "}
+          <Info term="swapOut" />. {fills.length} items need {units} units brought out from backstock <Info term="backstock" />.
         </s-paragraph>
       </s-section>
 

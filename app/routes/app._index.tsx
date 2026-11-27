@@ -9,6 +9,7 @@ import { FloorMap, FloorMapLegend } from "../components/FloorMap";
 import { Block, SlotRow } from "../components/FixtureSlots";
 import { SIZES } from "../lib/engine/types";
 import { sizeList } from "../lib/format";
+import { Info } from "../components/Info";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
@@ -157,7 +158,10 @@ function FixturePanel({ fixture: f, hasScan }: { fixture: PanelFixture; hasScan:
 
         {swapOuts.length > 0 && (
           <s-stack gap="small">
-            <s-heading>Swap-outs ({swapOuts.length})</s-heading>
+            <s-stack direction="inline" gap="small-300" alignItems="center">
+              <s-heading>Swap-outs ({swapOuts.length})</s-heading>
+              <Info term="swapOut" />
+            </s-stack>
             {swapOuts.map((s) => (
               <s-box key={s.slot} padding="base" border="base" borderRadius="base">
                 <s-stack direction="inline" gap="base" alignItems="center" justifyContent="space-between">
