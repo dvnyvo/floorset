@@ -8,18 +8,21 @@ import { SIZES, type SizeCounts } from "../lib/engine/types";
 import { onFillList } from "../lib/engine/status";
 import { sizeList } from "../lib/format";
 import { Info } from "../components/Info";
+import { ChangeList } from "../components/ChangeList";
+import { swapHistory } from "../lib/proposals.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const r = await loadReplenishment(admin);
   await saveSwapOuts(r, session.shop);
-  return r;
+  const applied = (await swapHistory()).filter((h) => h.status === "applied");
+  return { ...r, applied };
 };
 
 const sizes = (c: SizeCounts) => sizeList(c, SIZES);
 
 export default function Replenish() {
-  const { scan, fixtures } = useLoaderData<typeof loader>();
+  const { scan, fixtures, applied } = useLoaderData<typeof loader>();
   // ?fixture=<id> (from the floor map's fixture panel) narrows the fill list to one fixture.
   const [params] = useSearchParams();
   const only = fixtures.find((f) => f.id === params.get("fixture")) ?? null;
@@ -102,6 +105,15 @@ export default function Replenish() {
 
   return (
     <s-page heading="Floor replenishment">
+      {applied.length > 0 && (
+        <s-section heading={`Recent changes (${applied.length})`}>
+          <s-stack gap="small">
+            <s-paragraph>Swaps applied to the floor and still in place. Undo puts the old item back.</s-paragraph>
+            <ChangeList entries={applied} withFixture />
+          </s-stack>
+        </s-section>
+      )}
+
       <s-section heading={`Floor scan · ${scan.takenAt.slice(0, 10)}`}>
         <s-paragraph>
           {swapOuts.length} items can&apos;t hold their size run <Info term="sizeRun" /> and need a replacement{" "}
