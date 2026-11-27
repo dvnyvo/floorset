@@ -54,7 +54,9 @@ export default function Dashboard() {
           <Stat label="Raw read rate" value={pct(d.total.rawRate)} detail={`${d.total.raw.toLocaleString()} of ${d.total.expected.toLocaleString()} on-hand units read`} />
           <Stat label="Adjusted read rate" value={pct(d.total.adjustedRate)} detail="Excludes suspected loose tags" />
           <Stat label="Likely missing" value={`${pct(gap)} of stock`} detail={`${looseReads.toLocaleString()} items`} />
-          <Stat label="Unknown RFID tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
+          {d.unknownEpcs > 0 && (
+            <Stat label="Unknown RFID tags" value={String(d.unknownEpcs)} detail="Read but not in the unit list" />
+          )}
         </s-grid>
       </s-section>
 
