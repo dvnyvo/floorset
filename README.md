@@ -4,10 +4,12 @@
 
 A Shopify app that shows an apparel store what's really on its shelves, where stock is quietly going missing, and what each rack needs next.
 
+Built from my experience as a stockroom associate in an RFID-tagged apparel store.
+
 <!-- Placeholder: add the screenshot at docs/screenshots/floor-map.png -->
 ![Floor map: each rail and table colored by what needs attention](docs/screenshots/floor-map.png)
 
-**Video walkthrough:** coming soon <!-- Placeholder: link a 2-minute walkthrough here -->
+**Short video:** coming soon <!-- Placeholder: link the short video here -->
 
 ## What it does
 
@@ -28,7 +30,6 @@ A Shopify app that shows an apparel store what's really on its shelves, where st
 <!-- Placeholders: add these files under docs/screenshots/ -->
 | Page | Screenshot |
 | --- | --- |
-| Floor map | ![Floor map](docs/screenshots/floor-map.png) |
 | Fixture panel on the floor map | ![Fixture panel](docs/screenshots/fixture-panel.png) |
 | Replacement view for one slot | ![Fixture view](docs/screenshots/fixture-view.png) |
 | Read rate | ![Read rate](docs/screenshots/read-rate.png) |

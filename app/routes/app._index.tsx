@@ -116,7 +116,7 @@ export default function FloorMapPage() {
             onSelect={setSelected}
           />
           <FloorMapLegend />
-          <s-text color="subdued">Select a fixture (click, or Tab then Enter) to see its slots.</s-text>
+          <s-text color="subdued">Tip: you can also use Tab and Enter.</s-text>
         </s-stack>
       </s-section>
 
