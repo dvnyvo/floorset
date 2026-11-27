@@ -8,6 +8,10 @@ Built from my experience as a stockroom associate in an RFID-tagged apparel stor
 
 ![Floor map: each rail and table colored by what needs attention](docs/screenshots/floor-map.png)
 
+**26-second demo**
+
+https://github.com/user-attachments/assets/bade499e-638f-4f8f-bd13-3543fecbe957
+
 ## What it does
 
 - **Finds stock that's missing even when the count looks fine.** RFID scans say 96.1% of stock is there; once tags left behind by theft are taken out, it's 92.3%.
