@@ -24,9 +24,9 @@ describe("fixtureStatus", () => {
 });
 
 describe("shortStatus", () => {
-  it("labels each status in words that fit on a table", () => {
-    expect(shortStatus({ status: "replace", replace: 2, fill: 1 })).toBe("2 swap");
-    expect(shortStatus({ status: "fill", replace: 0, fill: 3 })).toBe("3 fill");
+  it("labels each status in words", () => {
+    expect(shortStatus({ status: "replace", replace: 2, fill: 1 })).toBe("2 to replace");
+    expect(shortStatus({ status: "fill", replace: 0, fill: 3 })).toBe("3 to fill");
     expect(shortStatus({ status: "ok", replace: 0, fill: 0 })).toBe("OK");
     expect(shortStatus({ status: null, replace: 0, fill: 0 })).toBe("");
   });

@@ -26,9 +26,9 @@ const INK = "#303030";
 const MUTED = "#616161";
 const SELECTED = "#2c6ecb";
 
-/** "2 swap", "3 fill", "OK": short enough to fit on a table. */
+/** "2 to replace", "3 to fill", "OK": the status in words on each fixture. */
 export const shortStatus = (f: Pick<MapFixture, "status" | "replace" | "fill">) =>
-  f.status === "replace" ? `${f.replace} swap` : f.status === "fill" ? `${f.fill} fill` : f.status === "ok" ? "OK" : "";
+  f.status === "replace" ? `${f.replace} to replace` : f.status === "fill" ? `${f.fill} to fill` : f.status === "ok" ? "OK" : "";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -157,7 +157,7 @@ export function FloorMap({
               <text x={f.rect.x + f.rect.w / 2} y={f.rect.y + f.rect.h / 2 - 0.4} textAnchor="middle" fill={INK} fontSize={1.9}>
                 {short}
                 {f.status && (
-                  <tspan x={f.rect.x + f.rect.w / 2} dy={2.6} fontWeight={600}>
+                  <tspan x={f.rect.x + f.rect.w / 2} dy={2.6} fontWeight={600} fontSize={1.6}>
                     {shortStatus(f)}
                   </tspan>
                 )}
@@ -173,8 +173,8 @@ export function FloorMap({
 /** Legend under the map: swatch plus words, and what the badges and short labels mean. */
 export function FloorMapLegend() {
   const items: [FixtureStatus, string][] = [
-    ["replace", "Needs replacing (“2 swap”: slots to replace)"],
-    ["fill", "Needs fill (“3 fill”: items to bring out)"],
+    ["replace", "Needs replacing (“2 to replace”: slots to swap out)"],
+    ["fill", "Needs fill (“3 to fill”: items to bring out)"],
     ["ok", "OK"],
   ];
   return (
@@ -191,11 +191,9 @@ export function FloorMapLegend() {
       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
         <span
           aria-hidden
-          style={{ minWidth: 18, height: 16, borderRadius: 8, background: INK, color: "#fff", fontSize: 11, fontWeight: 600, display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}
-        >
-          12
-        </span>
-        Suspected loose tags in a non-sales area
+          style={{ width: 22, height: 14, borderRadius: 7, background: INK }}
+        />
+        Loose tags found here (count of suspects in a non-sales area)
       </span>
     </div>
   );

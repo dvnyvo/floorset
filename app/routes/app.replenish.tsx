@@ -42,6 +42,63 @@ export default function Replenish() {
   const shownFills = only ? fills.filter((s) => s.fixture.id === only.id) : fills;
   const units = fills.reduce((n, s) => n + Object.values(s.fill).reduce((a, b) => a + (b ?? 0), 0), 0);
 
+  const swapSection = (
+    <s-section heading={`Swap-outs (${swapOuts.length})`}>
+      <s-table>
+        <s-table-header-row>
+          <s-table-header listSlot="primary">Item</s-table-header>
+          <s-table-header>Fixture</s-table-header>
+          <s-table-header>Why</s-table-header>
+          <s-table-header>Action</s-table-header>
+        </s-table-header-row>
+        <s-table-body>
+          {swapOuts.map((s) => (
+            <s-table-row key={`${s.fixture.id}-${s.slot}`}>
+              {/* The name links too: on narrow screens the Action column scrolls out of view. */}
+              <s-table-cell>
+                <s-link href={`/app/replenish/fixtures/${s.fixture.id}?slot=${s.slot}`}>{s.productTitle}</s-link>
+              </s-table-cell>
+              <s-table-cell>
+                {s.fixture.name}, slot {s.slot + 1}
+              </s-table-cell>
+              <s-table-cell>{s.reason}</s-table-cell>
+              <s-table-cell>
+                <s-button href={`/app/replenish/fixtures/${s.fixture.id}?slot=${s.slot}`}>Find replacement</s-button>
+              </s-table-cell>
+            </s-table-row>
+          ))}
+        </s-table-body>
+      </s-table>
+    </s-section>
+  );
+  const fillSection = (
+    <s-section heading={only ? `Fill list · ${only.name} (${shownFills.length})` : `Fill list (${fills.length})`}>
+      {only && (
+        <s-paragraph>
+          Showing {only.name} only. <s-link href="/app/replenish">Show all {fills.length}</s-link>
+        </s-paragraph>
+      )}
+      <s-table>
+        <s-table-header-row>
+          <s-table-header listSlot="primary">Item</s-table-header>
+          <s-table-header>Fixture</s-table-header>
+          <s-table-header>Bring out</s-table-header>
+          <s-table-header>On floor</s-table-header>
+        </s-table-header-row>
+        <s-table-body>
+          {shownFills.map((s) => (
+            <s-table-row key={`${s.fixture.id}-${s.slot}`}>
+              <s-table-cell>{s.productTitle}</s-table-cell>
+              <s-table-cell>{s.fixture.name}</s-table-cell>
+              <s-table-cell>{sizes(s.fill)}</s-table-cell>
+              <s-table-cell>{sizes(s.floor)}</s-table-cell>
+            </s-table-row>
+          ))}
+        </s-table-body>
+      </s-table>
+    </s-section>
+  );
+
   return (
     <s-page heading="Floor replenishment">
       <s-section heading={`Floor scan · ${scan.takenAt.slice(0, 10)}`}>
@@ -51,59 +108,9 @@ export default function Replenish() {
         </s-paragraph>
       </s-section>
 
-      <s-section heading={`Swap-outs (${swapOuts.length})`}>
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Item</s-table-header>
-            <s-table-header>Fixture</s-table-header>
-            <s-table-header>Why</s-table-header>
-            <s-table-header>Action</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {swapOuts.map((s) => (
-              <s-table-row key={`${s.fixture.id}-${s.slot}`}>
-                {/* The name links too: on narrow screens the Action column scrolls out of view. */}
-                <s-table-cell>
-                  <s-link href={`/app/replenish/fixtures/${s.fixture.id}?slot=${s.slot}`}>{s.productTitle}</s-link>
-                </s-table-cell>
-                <s-table-cell>
-                  {s.fixture.name}, slot {s.slot + 1}
-                </s-table-cell>
-                <s-table-cell>{s.reason}</s-table-cell>
-                <s-table-cell>
-                  <s-button href={`/app/replenish/fixtures/${s.fixture.id}?slot=${s.slot}`}>Find replacement</s-button>
-                </s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
-      </s-section>
-
-      <s-section heading={only ? `Fill list · ${only.name} (${shownFills.length})` : `Fill list (${fills.length})`}>
-        {only && (
-          <s-paragraph>
-            Showing {only.name} only. <s-link href="/app/replenish">Show all {fills.length}</s-link>
-          </s-paragraph>
-        )}
-        <s-table>
-          <s-table-header-row>
-            <s-table-header listSlot="primary">Item</s-table-header>
-            <s-table-header>Fixture</s-table-header>
-            <s-table-header>Bring out</s-table-header>
-            <s-table-header>On floor</s-table-header>
-          </s-table-header-row>
-          <s-table-body>
-            {shownFills.map((s) => (
-              <s-table-row key={`${s.fixture.id}-${s.slot}`}>
-                <s-table-cell>{s.productTitle}</s-table-cell>
-                <s-table-cell>{s.fixture.name}</s-table-cell>
-                <s-table-cell>{sizes(s.fill)}</s-table-cell>
-                <s-table-cell>{sizes(s.floor)}</s-table-cell>
-              </s-table-row>
-            ))}
-          </s-table-body>
-        </s-table>
-      </s-section>
+      {/* Filtered to one fixture (from the floor map): its fill list comes first. */}
+      {only ? fillSection : swapSection}
+      {only ? swapSection : fillSection}
     </s-page>
   );
 }

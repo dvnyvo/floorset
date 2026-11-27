@@ -54,20 +54,24 @@ export function rng(seed: number) {
   };
 }
 
-// Basic colors only: each product's color name is its color family's name.
-const COLORS: Record<ColorFamily, string[]> = {
-  black: ["Black"],
-  white: ["White"],
-  navy: ["Navy"],
-  red: ["Red"],
-  pink: ["Pink"],
-  brown: ["Brown"],
-  beige: ["Beige"],
-  grey: ["Grey"],
-  green: ["Green"],
-  purple: ["Purple"],
+// Products are named in the ten basic colors, but drawn and laid out in the generator's original 12 colors,
+// so the dataset (layout, stock, sales, scans) is the same as before the colors were simplified.
+type DrawColor =
+  | "black" | "navy" | "espresso" | "burgundy" | "olive" | "blue"
+  | "red" | "grey" | "pink" | "lilac" | "cream" | "white";
+const DRAW_COLORS: DrawColor[] = ["black", "navy", "espresso", "burgundy", "olive", "blue", "red", "grey", "pink", "lilac", "cream", "white"];
+const BASIC: Record<DrawColor, ColorFamily> = {
+  black: "black", navy: "navy", espresso: "brown", burgundy: "red", olive: "green", blue: "navy",
+  red: "red", grey: "grey", pink: "pink", lilac: "purple", cream: "beige", white: "white",
 };
-const FAMILIES = Object.keys(COLORS) as ColorFamily[];
+// A style drawn in both colors of a merged pair keeps the plain one; the other is renamed. Blue was off-palette
+// for the men's colorways it clashes in, so it becomes white. Burgundy clashes only on Atlas Long Sleeve, which is
+// placed in Zone 4 (red in its palette), so it stays in the red family under a shade name.
+const ON_CLASH: Partial<Record<DrawColor, { with: DrawColor; family: ColorFamily; name: string }>> = {
+  blue: { with: "navy", family: "white", name: "White" },
+  burgundy: { with: "red", family: "red", name: "Dark Red" },
+};
+const colorName = (c: ColorFamily) => c[0].toUpperCase() + c.slice(1);
 
 const CATEGORY: Record<Category, { label: string; fixture: ProductFixtureType; price: string; depts: Department[] }> = {
   legging: { label: "Legging", fixture: "both", price: "98.00", depts: ["womens"] },
@@ -89,13 +93,18 @@ const STYLE_NAMES = [
 // Relative sell-through by size: S and M move fastest.
 export const SIZE_CURVE: Record<Size, number> = { XXS: 0.5, XS: 0.8, S: 1.3, M: 1.3, L: 0.9, XL: 0.5 };
 
-const ZONES: SeedZone[] = [
-  { name: "Zone 1", department: "womens", palette: ["black", "grey", "white", "navy"] },
-  { name: "Zone 2", department: "womens", palette: ["beige", "pink", "purple", "grey"] },
-  { name: "Zone 3", department: "womens", palette: ["black", "red", "navy", "white"] },
-  { name: "Zone 4", department: "womens", palette: ["brown", "green", "beige", "red"] },
-  { name: "Men's", department: "mens", palette: ["black", "navy", "grey", "green", "brown"] },
+const ZONE_DRAW_PALETTES: [string, Department, DrawColor[]][] = [
+  ["Zone 1", "womens", ["black", "grey", "white", "navy"]],
+  ["Zone 2", "womens", ["cream", "pink", "lilac", "grey"]],
+  ["Zone 3", "womens", ["black", "red", "blue", "white"]],
+  ["Zone 4", "womens", ["espresso", "olive", "cream", "burgundy"]],
+  ["Men's", "mens", ["black", "navy", "grey", "olive", "espresso"]],
 ];
+const ZONES: SeedZone[] = ZONE_DRAW_PALETTES.map(([name, department, draw]) => ({
+  name,
+  department,
+  palette: [...new Set(draw.map((c) => BASIC[c]))], // Zone 1: black, grey, white, navy
+}));
 
 const RAIL_CADENCE: Record<Size, number> = { XXS: 1, XS: 2, S: 3, M: 3, L: 2, XL: 1 };
 const TABLE_CADENCE: Record<Size, number> = { XXS: 1, XS: 2, S: 2, M: 2, L: 2, XL: 1 };
@@ -104,10 +113,10 @@ const OUTERWEAR_CADENCE: Record<Size, number> = { XXS: 1, XS: 1, S: 2, M: 2, L: 
 // Styles added after the original 50, appended so the originals keep their colorways.
 // Fill styles give the outfit layout enough tops to complete every fixture. Bench styles stay off the starting
 // layout so Zone 1's swap-outs have replacements.
-const EXTRA_STYLES: { name: string; department: Department; category: Category; kind?: string; families: ColorFamily[]; bench?: boolean }[] = [
-  { name: "Aster", department: "womens", category: "top", kind: "Tank", families: ["white", "red", "navy"] },
-  { name: "Bloom", department: "womens", category: "top", families: ["navy", "grey", "green"] },
-  { name: "Cobble", department: "mens", category: "top", families: ["black", "navy", "green"] },
+const EXTRA_STYLES: { name: string; department: Department; category: Category; kind?: string; families: DrawColor[]; bench?: boolean }[] = [
+  { name: "Aster", department: "womens", category: "top", kind: "Tank", families: ["white", "red", "blue"] },
+  { name: "Bloom", department: "womens", category: "top", families: ["navy", "grey", "olive"] },
+  { name: "Cobble", department: "mens", category: "top", families: ["black", "navy", "olive"] },
   { name: "Halo", department: "womens", category: "top", kind: "Long Sleeve", families: ["grey", "navy", "white"], bench: true },
   { name: "Rook", department: "womens", category: "top", kind: "Tank", families: ["black"], bench: true },
 ];
@@ -139,37 +148,44 @@ export function generate(seed = 42): SeedData {
   const womensCats: [Category, string?][] = [["legging"], ["legging"], ["bra"], ["top"], ["top", "Long Sleeve"], ["outerwear"], ["short"]];
   const mensCats: [Category, string?][] = [["top"], ["short"], ["jogger"], ["outerwear"]];
   const products: SeedProduct[] = [];
-  const addProduct = (name: string, styleIndex: number, department: Department, category: Category, kind: string | undefined, family: ColorFamily) => {
+  const drawn = new Map<string, DrawColor>(); // handle -> the color it was drawn in, used for the layout
+  const addProduct = (name: string, styleIndex: number, department: Department, category: Category, kind: string | undefined, draw: DrawColor, styleDraws: DrawColor[]) => {
     const styleNo = String(1000 + styleIndex * 7);
-    const colorName = pick(COLORS[family]);
+    r(); // the old draw between two colorway names, kept so every later draw lands where it did
     const c = CATEGORY[category];
     const label = kind ?? c.label;
+    const style = `${name} ${department === "mens" ? "Men's " : ""}${label}`;
+    const clash = ON_CLASH[draw] && styleDraws.includes(ON_CLASH[draw].with) ? ON_CLASH[draw] : null;
+    const family = clash?.family ?? BASIC[draw];
+    const color = clash?.name ?? colorName(family);
     const product: SeedProduct = {
-      handle: slug(`${name} ${department === "mens" ? "mens " : ""}${label} ${colorName}`),
-      title: `${name} ${department === "mens" ? "Men's " : ""}${label} - ${colorName}`,
+      handle: slug(`${name} ${department === "mens" ? "mens " : ""}${label} ${color}`),
+      title: `${style} - ${color}`,
       styleNo,
       category,
       role: roleOf(label)!,
       department,
-      colorName,
+      colorName: color,
       colorFamily: family,
       fixtureType: c.fixture,
       price: c.price,
-      skus: Object.fromEntries(SIZES.map((s) => [s, `FS-${styleNo}-${slug(colorName).toUpperCase().slice(0, 4)}-${s}`])) as Record<Size, string>,
+      skus: Object.fromEntries(SIZES.map((s) => [s, `FS-${styleNo}-${slug(color).toUpperCase().slice(0, 4)}-${s}`])) as Record<Size, string>,
     };
     products.push(product);
+    drawn.set(product.handle, draw);
     return product;
   };
   const addExtras = (bench: boolean) =>
     EXTRA_STYLES.forEach((x, k) => {
-      if (Boolean(x.bench) === bench) for (const f of x.families) addProduct(x.name, STYLE_NAMES.length + k, x.department, x.category, x.kind, f);
+      if (Boolean(x.bench) === bench) for (const f of x.families) addProduct(x.name, STYLE_NAMES.length + k, x.department, x.category, x.kind, f, x.families);
     });
   STYLE_NAMES.forEach((name, i) => {
     const department: Department = i < 38 ? "womens" : "mens";
     const [category, kind] = department === "womens" ? womensCats[i % womensCats.length] : mensCats[i % mensCats.length];
     // Men's colorways lean on their zone's palette so the department has candidates.
-    const familyPool = department === "mens" ? (["black", "navy", "grey", "green", "brown", "white"] as ColorFamily[]) : FAMILIES;
-    for (const family of shuffle([...familyPool]).slice(0, 3)) addProduct(name, i, department, category, kind, family);
+    const familyPool = department === "mens" ? (["black", "navy", "grey", "olive", "espresso", "blue"] as DrawColor[]) : DRAW_COLORS;
+    const draws = shuffle([...familyPool]).slice(0, 3);
+    for (const draw of draws) addProduct(name, i, department, category, kind, draw, draws);
   });
 
   addExtras(false);
@@ -200,6 +216,7 @@ export function generate(seed = 42): SeedData {
   const placedOn = new Map<string, FixtureType>(); // handle -> fixture type it sits on
   for (const f of fixtures) {
     const zone = ZONES.find((z) => z.name === f.zone)!;
+    const drawPalette = ZONE_DRAW_PALETTES.find(([name]) => name === f.zone)![2];
     const roles = slotRoles(f.type, zone.department, f.slotCount);
     const onFixture: SeedProduct[] = [];
     for (let slot = 0; slot < f.slotCount; slot++) {
@@ -210,11 +227,11 @@ export function generate(seed = 42): SeedData {
           (p) =>
             !placed.has(p.handle) &&
             p.department === zone.department &&
-            zone.palette.includes(p.colorFamily) &&
+            drawPalette.includes(drawn.get(p.handle)!) &&
             fits(p.fixtureType, f.type) &&
             roles[slot].includes(p.role) &&
             !(f.type === "table" && p.category === "outerwear") &&
-            (plantDup ? p.colorFamily === prev.colorFamily : !prev || p.colorFamily !== prev.colorFamily),
+            (plantDup ? drawn.get(p.handle) === drawn.get(prev.handle) : !prev || drawn.get(p.handle) !== drawn.get(prev.handle)),
         ),
       );
       const p = candidates[0];
@@ -320,4 +337,10 @@ function selfCheck(d: SeedData) {
   const dup = d.placements.filter((p) => p.fixture === d.planted.sameColorRail).sort((a, b) => a.slot - b.slot);
   const fam = (h: string) => d.products.find((p) => p.handle === h)!.colorFamily;
   assert(dup.length >= 3 && fam(dup[1].handle) === fam(dup[2].handle), "planted same-color neighbors");
+  // Merged colors (blue into navy, burgundy into red) must not create any other same-color neighbors.
+  for (const f of d.fixtures) {
+    const on = d.placements.filter((p) => p.fixture === f.name).sort((a, b) => a.slot - b.slot);
+    const same = on.slice(1).filter((p, i) => fam(p.handle) === fam(on[i].handle)).length;
+    assert(same === (f.name === d.planted.sameColorRail ? 1 : 0), `${f.name} same-color neighbors: ${same}`);
+  }
 }
