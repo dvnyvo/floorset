@@ -15,7 +15,7 @@ describe("demo dataset", () => {
   });
 
   it("is byte-for-byte the same as before", () => {
-    expect(createHash("sha1").update(JSON.stringify(d)).digest("hex")).toBe("ddee0a687636d036268623e873a11cddad436b1c");
+    expect(createHash("sha1").update(JSON.stringify(d)).digest("hex")).toBe("c4f4063e73288b6f5a118334223da9208c084531");
   });
 
   it("names every product in one of the ten basic colors", () => {

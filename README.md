@@ -70,7 +70,7 @@ An optional Claude copilot on the fixture view turns requests like "something br
 1. **Read rate.** The store reads 96.1%, above the 95% target. With suspected loose tags taken out it reads 92.3%: 3.8 points of shrink the headline number hides. The chart shows the adjusted rate holding near 96% for six counts and then falling as loose tags pile up, while bras slide from 95% to 89%.
 2. **Loose tags.** 255 suspects, almost all in four spots where no stock belongs: the fitting room, an entrance corner, the cash wrap and a back corridor. Mark one "RFID tag only"; a correction is proposed. Approve it and Shopify's available count drops by one. Undo puts it back.
 3. **Replenishment.** 8 items can't hold their size run. Click **Find replacement** on Zone 2 Rail 2.
-4. **Fixture view.** The before row shows the rail grouped into outfits, each slot labelled with the role it needs; the after row shows it with the top pick. Each pick says why in plain English (size run, backstock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap. Zone 1 Rail 1, slot 2 has no valid pick; it lists the closest options instead, each labeled with the one rule it breaks.
+4. **Fixture view.** The before row shows the rail grouped into outfits, each slot labelled with the role it needs; the after row shows it with the top pick. Each pick says why in plain English (size run, backstock, palette fit, its neighbors, sales). Each rejection names the rule that blocked it. Press **Brighter**, then propose, approve, and undo a swap. Zone 1 Rail 2, slot 2 has no valid pick; it lists the closest options instead, each labeled with the one rule it breaks.
 5. **Sidekick.** Ask "Which floor items need replacing?" and follow the link back to the fixture view.
 
 ### Architecture
@@ -133,7 +133,7 @@ Shopify stays the source of truth for products and counts. The app database hold
 | Raw vs adjusted read rate (latest inventory scan, 6,730 units on hand) | 96.1% raw, 92.3% adjusted. The raw rate passes the 95% target; the adjusted rate fails it |
 | Planted bra theft (5% of units, RFID tags gone, building up over six weeks) | Bras fall from 95% to 89% across eight inventory scans |
 | Loose-tag detection | 277 planted, 255 flagged, 0 false alarms. The 22 planted RFID-encoded tags dropped at their own fixture are not flagged: they look exactly like stock on the floor, which is the limit of scan-only detection |
-| Swap-outs | 8 found; 7 have valid replacements. 1 (Zone 1 Rail 1, slot 2) is planted with no valid pick and shows 3 closest options |
+| Swap-outs | 8 found; 7 have valid replacements. 1 (Zone 1 Rail 2, slot 2) is planted with no valid pick and shows 3 closest options |
 | Write path | Propose → apply → undo verified against a dev store for both metafield swaps and inventory corrections |
 
 ### What I'd change at scale
