@@ -10,16 +10,19 @@ import { Block, SlotRow } from "../components/FixtureSlots";
 import { SIZES } from "../lib/engine/types";
 import { sizeList } from "../lib/format";
 import { Info } from "../components/Info";
+import { ChangeList } from "../components/ChangeList";
+import { swapHistory } from "../lib/proposals.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin } = await authenticate.admin(request);
-  const [plan, repl] = await Promise.all([loadFloorPlan(), loadReplenishment(admin)]);
+  const [plan, repl, history] = await Promise.all([loadFloorPlan(), loadReplenishment(admin), swapHistory()]);
   const byId = new Map(repl.fixtures.map((f) => [f.id, f]));
 
   const fixtures = plan.fixtures.flatMap((pf) => {
     if (!pf.rect) return [];
     const f = byId.get(pf.id);
     const slots = f?.slots ?? [];
+    const changes = history.filter((h) => h.fixtureId === pf.id);
     return [
       {
         id: pf.id,
@@ -33,6 +36,8 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
         replace: slots.filter((s) => s.swapOut).length,
         fill: slots.filter(onFillList).length,
         slots,
+        history: changes,
+        changed: changes.some((h) => h.status === "applied"),
       },
     ];
   });
@@ -127,6 +132,7 @@ export default function FloorMapPage() {
 
 type PanelFixture = ReturnType<typeof useLoaderData<typeof loader>>["fixtures"][number];
 
+const HISTORY_SHOWN = 5;
 const STATUS_TONE = { replace: "critical", fill: "warning", ok: "success" } as const;
 
 /** The selected fixture: its slots in floor order, swap-outs with their reason, and what to bring out. */
@@ -193,6 +199,15 @@ function FixturePanel({ fixture: f, hasScan }: { fixture: PanelFixture; hasScan:
         )}
 
         {f.status === "ok" && <s-paragraph>Every slot holds its size run. Nothing to bring out.</s-paragraph>}
+
+        <s-stack gap="small">
+          <s-heading>History</s-heading>
+          {f.history.length ? (
+            <ChangeList entries={f.history} shown={HISTORY_SHOWN} from="map" />
+          ) : (
+            <s-paragraph>No changes yet.</s-paragraph>
+          )}
+        </s-stack>
       </s-stack>
     </s-section>
   );

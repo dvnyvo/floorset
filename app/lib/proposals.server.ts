@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import db from "../db.server";
 import { gql, invalidateCatalog, primaryLocationId, type AdminClient } from "./shopify/catalog.server";
+import { toHistory } from "./history";
 
 export interface SwapPayload {
   fixtureId: string;
@@ -92,6 +93,12 @@ export function listProposals({ kind, fixtureId }: { kind: string; fixtureId?: s
   return db.proposal
     .findMany({ where: { kind }, orderBy: { createdAt: "desc" }, take: 100 })
     .then((ps) => ps.filter((p) => !fixtureId || (p.payload as unknown as SwapPayload).fixtureId === fixtureId));
+}
+
+/** Every fixture swap with its audit rows, as history entries (newest first). Read-only. */
+export async function swapHistory(fixtureId?: string) {
+  const rows = await db.proposal.findMany({ where: { kind: "fixture_swap" }, include: { auditLogs: true } });
+  return toHistory(rows, fixtureId);
 }
 
 function handler(kind: string): Handler {
