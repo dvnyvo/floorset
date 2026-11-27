@@ -58,9 +58,8 @@ TypeScript, React Router, Shopify Admin GraphQL, Polaris, Sidekick app extension
 - **Size run / swap-out.** The sizes a fixture shows for one item, for example 1 XXS, 2 XS, 3 S, 3 M, 2 L and 1 XL on a rail. An item whose size run can't be refilled from backstock, so it's replaced with a different item that can.
 - **Backstock.** Stock kept in the stockroom, used to refill the sales floor.
 
-## For engineers
 
-### Architecture
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -98,7 +97,7 @@ flowchart LR
 
 Shopify stays the source of truth for products and counts. The app database holds what Shopify doesn't model: the floor layout, size cadences, one row per RFID tag, raw scan reads, read-rate snapshots, daily sales, loose-tag suspects, proposals, and the audit log.
 
-### Design decisions
+## Design decisions
 
 - **A deterministic rules engine, with the LLM kept at the edge.** Ranking is pure functions: stock rules (full size run, 2× depth, not damaged, fixture type, department), then preferences, then visual standards (outfit role, zone palette, color adjacency), then a weighted score. The engine is unit-tested and explainable. The copilot can only change preferences, which narrow or re-weight; it can't loosen a rule, and its propose tool rejects anything outside the engine's current picks.
 - **Fixtures are merchandised as outfits.** Every 3 rail slots form one outfit, and each slot needs a role: top (bra, tank, tee, shirt), bottom (legging, short, jogger, trouser) or cover-up (jacket, long sleeve, hoodie, all outerwear). Women's rails run top → bottom → cover-up, men's run cover-up → top → bottom. Tables take tops and non-outerwear cover-ups on the left half and bottoms on the right; outerwear never goes on a table. Role is its own product metafield, separate from category: a long sleeve is a top by category and a cover-up by role. A wrong-role item is rejected with the slot's rule ("Slot 3 is a cover-up slot (top → bottom → cover-up)"). The sequence already limits each role per fixture, so there is no separate per-category cap.
